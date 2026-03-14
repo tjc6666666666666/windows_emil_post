@@ -4,7 +4,7 @@
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from passlib.context import CryptContext
+import bcrypt
 from jose import JWTError, jwt
 from fastapi import HTTPException, status
 from app.models.user import User
@@ -15,16 +15,18 @@ from app.config import settings
 class AuthService:
     """认证服务"""
     
-    def __init__(self):
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """验证密码"""
-        return self.pwd_context.verify(plain_password, hashed_password)
+        password_bytes = plain_password.encode('utf-8')
+        hashed_bytes = hashed_password.encode('utf-8')
+        return bcrypt.checkpw(password_bytes, hashed_bytes)
     
     def get_password_hash(self, password: str) -> str:
         """生成密码哈希"""
-        return self.pwd_context.hash(password)
+        password_bytes = password.encode('utf-8')
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        return hashed.decode('utf-8')
     
     def create_access_token(self, data: dict) -> str:
         """创建访问令牌"""
