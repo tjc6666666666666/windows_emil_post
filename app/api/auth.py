@@ -35,6 +35,14 @@ async def login(
     return Token(access_token=access_token)
 
 
+@router.get("/me", response_model=UserResponse)
+async def get_user_info(
+    current_user = Depends(get_current_user)
+):
+    """获取当前用户信息"""
+    return current_user
+
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)

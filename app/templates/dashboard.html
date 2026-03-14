@@ -6,7 +6,7 @@
 <div class="dashboard">
     <div class="dashboard-header">
         <h2>控制面板</h2>
-        <p>欢迎回来，{{ user.username }}！</p>
+        <p>欢迎回来，<span id="username">加载中...</span>！</p>
     </div>
     
     <div class="dashboard-stats">
@@ -30,7 +30,7 @@
             <div class="stat-icon">👤</div>
             <div class="stat-info">
                 <h3>邮箱地址</h3>
-                <p class="stat-email">{{ user.email }}</p>
+                <p class="stat-email" id="userEmail">加载中...</p>
             </div>
         </div>
     </div>
@@ -68,8 +68,35 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     checkAuth();
+    loadUserInfo();
     loadStats();
 });
+
+async function loadUserInfo() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/auth/me', {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+        
+        if (response.ok) {
+            const user = await response.json();
+            document.getElementById('username').textContent = user.username;
+            document.getElementById('userEmail').textContent = user.email;
+        } else {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+    } catch (error) {
+        console.error('获取用户信息失败:', error);
+        showMessage('获取用户信息失败', 'error');
+    }
+}
 
 async function loadStats() {
     const token = localStorage.getItem('token');

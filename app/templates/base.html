@@ -11,17 +11,8 @@
         <div class="nav-brand">
             <a href="/">📧 Email Server</a>
         </div>
-        <div class="nav-links">
-            {% if user %}
-                <span class="user-info">欢迎, {{ user.username }}</span>
-                <a href="/dashboard">控制面板</a>
-                <a href="/compose">写邮件</a>
-                <a href="/inbox">收件箱</a>
-                <a href="#" onclick="logout()">退出</a>
-            {% else %}
-                <a href="/login">登录</a>
-                <a href="/register">注册</a>
-            {% endif %}
+        <div class="nav-links" id="navLinks">
+            <!-- JavaScript会动态填充 -->
         </div>
     </nav>
     
@@ -34,6 +25,31 @@
     </footer>
     
     <script src="/static/js/app.js"></script>
+    <script>
+        // 页面加载时更新导航栏
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNavbar();
+        });
+        
+        function updateNavbar() {
+            const token = localStorage.getItem('token');
+            const navLinks = document.getElementById('navLinks');
+            
+            if (token) {
+                navLinks.innerHTML = `
+                    <a href="/dashboard">控制面板</a>
+                    <a href="/compose">写邮件</a>
+                    <a href="/inbox">收件箱</a>
+                    <a href="#" onclick="logout()">退出</a>
+                `;
+            } else {
+                navLinks.innerHTML = `
+                    <a href="/login">登录</a>
+                    <a href="/register">注册</a>
+                `;
+            }
+        }
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

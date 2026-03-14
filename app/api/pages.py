@@ -1,11 +1,9 @@
 """
 页面路由（前端HTML）
 """
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from app.api.auth import get_current_user
-from app.models.user import User
 
 
 router = APIRouter(tags=["页面"])
@@ -31,27 +29,18 @@ async def register_page(request: Request):
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
-async def dashboard_page(request: Request, current_user: User = Depends(get_current_user)):
+async def dashboard_page(request: Request):
     """控制面板页面"""
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "user": current_user
-    })
+    return templates.TemplateResponse("dashboard.html", {"request": request})
 
 
 @router.get("/compose", response_class=HTMLResponse)
-async def compose_page(request: Request, current_user: User = Depends(get_current_user)):
+async def compose_page(request: Request):
     """写邮件页面"""
-    return templates.TemplateResponse("compose.html", {
-        "request": request,
-        "user": current_user
-    })
+    return templates.TemplateResponse("compose.html", {"request": request})
 
 
 @router.get("/inbox", response_class=HTMLResponse)
-async def inbox_page(request: Request, current_user: User = Depends(get_current_user)):
+async def inbox_page(request: Request):
     """收件箱页面"""
-    return templates.TemplateResponse("inbox.html", {
-        "request": request,
-        "user": current_user
-    })
+    return templates.TemplateResponse("inbox.html", {"request": request})

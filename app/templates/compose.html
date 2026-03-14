@@ -9,7 +9,7 @@
         <form id="composeForm" onsubmit="handleSendEmail(event)">
             <div class="form-group">
                 <label for="from">发件人</label>
-                <input type="email" id="from" value="{{ user.email }}" readonly 
+                <input type="email" id="from" value="加载中..." readonly 
                        class="readonly-input">
             </div>
             
@@ -42,6 +42,35 @@
 
 {% block scripts %}
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
+    loadUserInfo();
+});
+
+async function loadUserInfo() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/auth/me', {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+        
+        if (response.ok) {
+            const user = await response.json();
+            document.getElementById('from').value = user.email;
+        } else {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+    } catch (error) {
+        console.error('获取用户信息失败:', error);
+    }
+}
+
 async function handleSendEmail(event) {
     event.preventDefault();
     
