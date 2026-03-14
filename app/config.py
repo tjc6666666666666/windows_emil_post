@@ -29,7 +29,10 @@ class Settings(BaseSettings):
     JWT_EXPIRATION_HOURS: int = 24
     
     # SMTP服务器配置（用于接收邮件）
-    SMTP_HOST: str = os.getenv("SMTP_HOST", "0.0.0.0")
+    # SMTP_BIND: 绑定地址，0.0.0.0 表示监听所有网络接口
+    # SMTP_HOST: 用于连接验证的地址，使用 127.0.0.1
+    SMTP_BIND: str = os.getenv("SMTP_BIND", "0.0.0.0")
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "127.0.0.1")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "25"))
     
     # IMAP配置

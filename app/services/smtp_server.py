@@ -3,6 +3,7 @@ SMTP服务器 - 接收外部邮件
 """
 import asyncio
 import logging
+import socket
 from email import message_from_bytes
 from email.utils import parseaddr
 from aiosmtpd.controller import Controller
@@ -88,6 +89,23 @@ class EmailHandler:
             return '550 Message rejected'
 
 
+class CustomController(Controller):
+    """自定义Controller，解决Windows下绑定0.0.0.0的问题"""
+    
+    def _trigger_server(self):
+        """重写验证逻辑，使用127.0.0.1连接验证"""
+        # 使用 SMTP_HOST (127.0.0.1) 进行连接验证，而不是 SMTP_BIND (0.0.0.0)
+        import contextlib
+        try:
+            with contextlib.ExitStack() as stk:
+                s = stk.enter_context(
+                    socket.create_connection((settings.SMTP_HOST, self.port), 1.0)
+                )
+                # 服务器已就绪
+        except Exception:
+            raise
+
+
 class SMTPServerController:
     """SMTP服务器控制器"""
     
@@ -97,13 +115,14 @@ class SMTPServerController:
     def start(self):
         """启动SMTP服务器"""
         handler = EmailHandler()
-        self.controller = Controller(
+        # 使用 SMTP_BIND (0.0.0.0) 绑定所有接口
+        self.controller = CustomController(
             handler,
-            hostname=settings.SMTP_HOST,
+            hostname=settings.SMTP_BIND,
             port=settings.SMTP_PORT
         )
         self.controller.start()
-        logger.info(f"SMTP服务器已启动: {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+        logger.info(f"SMTP服务器已启动: {settings.SMTP_BIND}:{settings.SMTP_PORT}")
     
     def stop(self):
         """停止SMTP服务器"""
