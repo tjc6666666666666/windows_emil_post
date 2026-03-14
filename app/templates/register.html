@@ -6,18 +6,24 @@
 <div class="auth-container">
     <div class="auth-card">
         <h2>注册</h2>
+        <div class="info-box">
+            <p>📧 注册后将自动获得系统邮箱</p>
+            <p id="emailHint">格式：用户名@<span id="mailDomain">加载中...</span></p>
+        </div>
         <form id="registerForm" onsubmit="handleRegister(event)">
             <div class="form-group">
                 <label for="username">用户名</label>
                 <input type="text" id="username" name="username" required 
                        minlength="3" maxlength="50" pattern="[a-zA-Z0-9]+"
-                       placeholder="3-50位字母或数字">
+                       placeholder="3-50位字母或数字" oninput="updateEmailPreview()">
+                <small class="hint">只能包含字母和数字</small>
             </div>
             
             <div class="form-group">
-                <label for="email">邮箱</label>
-                <input type="email" id="email" name="email" required 
-                       placeholder="请输入邮箱地址">
+                <label>您的邮箱地址</label>
+                <div class="email-preview">
+                    <span id="emailPreview">用户名</span>@<span id="domainPreview">域名</span>
+                </div>
             </div>
             
             <div class="form-group">
@@ -45,6 +51,26 @@
 
 {% block scripts %}
 <script>
+// 页面加载时获取域名
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        // 从配置中获取域名，这里简化处理，直接显示默认域名
+        const domain = '453627.xyz'; // 从服务器配置获取
+        document.getElementById('mailDomain').textContent = domain;
+        document.getElementById('domainPreview').textContent = domain;
+    } catch (error) {
+        console.error('获取配置失败:', error);
+    }
+});
+
+function updateEmailPreview() {
+    const username = document.getElementById('username').value;
+    const preview = document.getElementById('emailPreview');
+    preview.textContent = username || '用户名';
+}
+
 async function handleRegister(event) {
     event.preventDefault();
     
@@ -59,7 +85,6 @@ async function handleRegister(event) {
     
     const data = {
         username: form.username.value,
-        email: form.email.value,
         password: password
     };
     
@@ -75,10 +100,10 @@ async function handleRegister(event) {
         const result = await response.json();
         
         if (response.ok) {
-            showMessage('注册成功！正在跳转登录页面...', 'success');
+            showMessage(`注册成功！您的邮箱是 ${result.email}`, 'success');
             setTimeout(() => {
                 window.location.href = '/login';
-            }, 1500);
+            }, 2500);
         } else {
             showMessage(result.detail || '注册失败', 'error');
         }

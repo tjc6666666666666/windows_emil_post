@@ -57,7 +57,7 @@ class AuthService:
             )
     
     async def register_user(self, db: AsyncSession, user_data: UserCreate) -> User:
-        """注册新用户"""
+        """注册新用户（自动分配系统邮箱）"""
         # 检查用户名是否存在
         result = await db.execute(
             select(User).where(User.username == user_data.username)
@@ -68,9 +68,12 @@ class AuthService:
                 detail="用户名已存在"
             )
         
-        # 检查邮箱是否存在
+        # 自动生成邮箱：username@MAIL_DOMAIN
+        email = f"{user_data.username}@{settings.MAIL_DOMAIN}"
+        
+        # 检查邮箱是否存在（理论上不会重复，因为username唯一）
         result = await db.execute(
-            select(User).where(User.email == user_data.email)
+            select(User).where(User.email == email)
         )
         if result.scalar_one_or_none():
             raise HTTPException(
@@ -81,7 +84,7 @@ class AuthService:
         # 创建用户
         user = User(
             username=user_data.username,
-            email=user_data.email,
+            email=email,  # 使用自动生成的邮箱
             password_hash=self.get_password_hash(user_data.password)
         )
         db.add(user)
