@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - Email Server{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>📧 Email Server</h1>
+    <p class="hero-subtitle">高并发异步邮件系统</p>
+    <p class="hero-description">
+        基于FastAPI构建的现代邮件服务，支持高并发处理、异步发送与接收
+    </p>
+    <div class="hero-buttons">
+        <a href="/register" class="btn btn-primary">立即注册</a>
+        <a href="/login" class="btn btn-secondary">登录</a>
+    </div>
+    
+    <div class="features">
+        <div class="feature">
+            <div class="feature-icon">⚡</div>
+            <h3>高性能</h3>
+            <p>异步架构，支持高并发处理</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">🔒</div>
+            <h3>安全可靠</h3>
+            <p>JWT认证，密码加密存储</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">📬</div>
+            <h3>邮件管理</h3>
+            <p>支持发送、接收邮件</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">🎨</div>
+            <h3>现代UI</h3>
+            <p>响应式设计，美观易用</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

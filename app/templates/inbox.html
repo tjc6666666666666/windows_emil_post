@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}收件箱 - Email Server{% endblock %}
+
+{% block content %}
+<div class="inbox-container">
+    <div class="inbox-header">
+        <h2>收件箱</h2>
+        <button class="btn btn-secondary" onclick="refreshInbox()">刷新</button>
+    </div>
+    
+    <div id="inboxList" class="email-list">
+        <p class="loading">加载中...</p>
+    </div>
+</div>
+
+<!-- 邮件详情模态框 -->
+<div id="emailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalSubject">邮件主题</h3>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="email-meta">
+                <p><strong>发件人:</strong> <span id="modalFrom"></span></p>
+                <p><strong>收件人:</strong> <span id="modalTo"></span></p>
+                <p><strong>时间:</strong> <span id="modalDate"></span></p>
+            </div>
+            <hr>
+            <div id="modalBody" class="email-body"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
+            <button class="btn btn-primary" onclick="replyEmail()">回复</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
+    loadInbox();
+});
+
+async function loadInbox() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+        const response = await fetch('/api/email/inbox?limit=50', {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            renderInbox(data.emails);
+        } else {
+            document.getElementById('inboxList').innerHTML = '<p class="error">加载失败</p>';
+        }
+    } catch (error) {
+        document.getElementById('inboxList').innerHTML = '<p class="error">网络错误</p>';
+    }
+}
+
+function renderInbox(emails) {
+    if (!emails || emails.length === 0) {
+        document.getElementById('inboxList').innerHTML = '<p class="empty">收件箱为空</p>';
+        return;
+    }
+    
+    const html = emails.map(email => `
+        <div class="email-item" onclick="viewEmail('${email.id}')">
+            <div class="email-header">
+                <span class="email-from">发件人: ${email.from}</span>
+                <span class="email-date">${email.date}</span>
+            </div>
+            <div class="email-subject">${email.subject}</div>
+        </div>
+    `).join('');
+    
+    document.getElementById('inboxList').innerHTML = html;
+}
+
+async function viewEmail(emailId) {
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`/api/email/inbox/${emailId}`, {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+        
+        const email = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('modalSubject').textContent = email.subject;
+            document.getElementById('modalFrom').textContent = email.from;
+            document.getElementById('modalTo').textContent = email.to;
+            document.getElementById('modalDate').textContent = email.date;
+            document.getElementById('modalBody').textContent = email.body || '无内容';
+            
+            document.getElementById('emailModal').style.display = 'block';
+        }
+    } catch (error) {
+        showMessage('加载邮件失败', 'error');
+    }
+}
+
+function closeModal() {
+    document.getElementById('emailModal').style.display = 'none';
+}
+
+function refreshInbox() {
+    document.getElementById('inboxList').innerHTML = '<p class="loading">加载中...</p>';
+    loadInbox();
+}
+
+function replyEmail() {
+    const from = document.getElementById('modalFrom').textContent;
+    const subject = document.getElementById('modalSubject').textContent;
+    
+    localStorage.setItem('replyTo', from);
+    localStorage.setItem('replySubject', 'Re: ' + subject);
+    
+    window.location.href = '/compose';
+}
+</script>
+{% endblock %}

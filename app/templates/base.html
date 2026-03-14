@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Email Server{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="/">📧 Email Server</a>
+        </div>
+        <div class="nav-links">
+            {% if user %}
+                <span class="user-info">欢迎, {{ user.username }}</span>
+                <a href="/dashboard">控制面板</a>
+                <a href="/compose">写邮件</a>
+                <a href="/inbox">收件箱</a>
+                <a href="#" onclick="logout()">退出</a>
+            {% else %}
+                <a href="/login">登录</a>
+                <a href="/register">注册</a>
+            {% endif %}
+        </div>
+    </nav>
+    
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer class="footer">
+        <p>&copy; 2024 Email Server. 高并发异步邮件系统</p>
+    </footer>
+    
+    <script src="/static/js/app.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,30 @@
+# FastAPI框架及依赖
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+jinja2>=3.1.3
+
+# 异步数据库
+sqlalchemy>=2.0.25
+asyncpg>=0.29.0
+aiosqlite>=0.19.0
+
+# Pydantic配置
+pydantic>=2.5.3
+pydantic-settings>=2.1.0
+email-validator>=2.1.0
+
+# 认证相关
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# 异步邮件
+aiodns>=3.0.0
+aiosmtplib>=3.0.0
+aioimaplib>=1.0.0
+
+# 异步HTTP客户端（可选）
+httpx>=0.26.0
+
+# 开发工具
+python-dotenv>=1.0.0

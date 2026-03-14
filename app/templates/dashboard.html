@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}控制面板 - Email Server{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h2>控制面板</h2>
+        <p>欢迎回来，{{ user.username }}！</p>
+    </div>
+    
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <div class="stat-icon">📧</div>
+            <div class="stat-info">
+                <h3>已发送</h3>
+                <p class="stat-number" id="sentCount">0</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">📬</div>
+            <div class="stat-info">
+                <h3>收件箱</h3>
+                <p class="stat-number" id="inboxCount">0</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">👤</div>
+            <div class="stat-info">
+                <h3>邮箱地址</h3>
+                <p class="stat-email">{{ user.email }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-actions">
+        <a href="/compose" class="action-card">
+            <div class="action-icon">✉️</div>
+            <h3>写邮件</h3>
+            <p>发送新邮件</p>
+        </a>
+        
+        <a href="/inbox" class="action-card">
+            <div class="action-icon">📥</div>
+            <h3>收件箱</h3>
+            <p>查看收到的邮件</p>
+        </a>
+        
+        <a href="#" class="action-card" onclick="loadSentEmails()">
+            <div class="action-icon">📤</div>
+            <h3>已发送</h3>
+            <p>查看发送记录</p>
+        </a>
+    </div>
+    
+    <div class="recent-emails">
+        <h3>最近邮件</h3>
+        <div id="recentEmailsList" class="email-list">
+            <p class="loading">加载中...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
+    loadStats();
+});
+
+async function loadStats() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+        // 加载已发送邮件数
+        const sentResponse = await fetch('/api/email/sent?page=1&page_size=1', {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+        if (sentResponse.ok) {
+            const sentData = await sentResponse.json();
+            document.getElementById('sentCount').textContent = sentData.total;
+        }
+        
+        // 加载收件箱邮件数
+        const inboxResponse = await fetch('/api/email/inbox?limit=1', {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+        if (inboxResponse.ok) {
+            const inboxData = await inboxResponse.json();
+            document.getElementById('inboxCount').textContent = inboxData.emails.length;
+        }
+    } catch (error) {
+        console.error('加载统计数据失败:', error);
+    }
+}
+
+async function loadSentEmails() {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch('/api/email/sent?page=1&page_size=10', {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+        const data = await response.json();
+        
+        const listHtml = data.emails.map(email => `
+            <div class="email-item" onclick="viewEmail('${email.id}')">
+                <div class="email-header">
+                    <span class="email-to">收件人: ${email.to_addr}</span>
+                    <span class="email-date">${new Date(email.created_at).toLocaleString()}</span>
+                </div>
+                <div class="email-subject">${email.subject}</div>
+                <div class="email-status ${email.status}">${email.status}</div>
+            </div>
+        `).join('');
+        
+        document.getElementById('recentEmailsList').innerHTML = listHtml || '<p>暂无邮件</p>';
+    } catch (error) {
+        showMessage('加载失败', 'error');
+    }
+}
+</script>
+{% endblock %}

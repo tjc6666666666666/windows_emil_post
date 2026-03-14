@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}写邮件 - Email Server{% endblock %}
+
+{% block content %}
+<div class="compose-container">
+    <div class="compose-card">
+        <h2>写邮件</h2>
+        <form id="composeForm" onsubmit="handleSendEmail(event)">
+            <div class="form-group">
+                <label for="from">发件人</label>
+                <input type="email" id="from" value="{{ user.email }}" readonly 
+                       class="readonly-input">
+            </div>
+            
+            <div class="form-group">
+                <label for="to">收件人</label>
+                <input type="email" id="to" name="to" required 
+                       placeholder="请输入收件人邮箱地址">
+            </div>
+            
+            <div class="form-group">
+                <label for="subject">主题</label>
+                <input type="text" id="subject" name="subject" required 
+                       placeholder="请输入邮件主题">
+            </div>
+            
+            <div class="form-group">
+                <label for="body">正文</label>
+                <textarea id="body" name="body" rows="10" 
+                          placeholder="请输入邮件内容"></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="saveDraft()">保存草稿</button>
+                <button type="submit" class="btn btn-primary">发送</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function handleSendEmail(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const data = {
+        to_addr: form.to.value,
+        subject: form.subject.value,
+        body: form.body.value
+    };
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+        showMessage('请先登录', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/email/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showMessage('邮件发送成功！', 'success');
+            form.reset();
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1500);
+        } else {
+            showMessage(result.detail || '发送失败', 'error');
+        }
+    } catch (error) {
+        showMessage('网络错误，请重试', 'error');
+    }
+}
+
+function saveDraft() {
+    showMessage('草稿功能开发中...', 'info');
+}
+</script>
+{% endblock %}
