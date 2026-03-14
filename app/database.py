@@ -6,14 +6,24 @@ from sqlalchemy.orm import DeclarativeBase
 from app.config import settings
 
 
-# 创建异步引擎
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    pool_size=20,
-    max_overflow=40,
-    pool_pre_ping=True,
-)
+# 根据数据库类型配置连接池参数
+# SQLite不支持连接池，PostgreSQL/MySQL需要连接池
+if settings.DATABASE_URL.startswith("sqlite"):
+    # SQLite配置
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        echo=settings.DEBUG,
+        connect_args={"check_same_thread": False}  # SQLite特有参数
+    )
+else:
+    # PostgreSQL/MySQL配置（支持连接池）
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        echo=settings.DEBUG,
+        pool_size=20,
+        max_overflow=40,
+        pool_pre_ping=True,
+    )
 
 # 创建异步会话工厂
 async_session_maker = async_sessionmaker(

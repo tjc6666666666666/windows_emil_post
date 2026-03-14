@@ -14,10 +14,10 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     
-    # 数据库配置
+    # 数据库配置（默认使用SQLite，如需PostgreSQL请设置DATABASE_URL环境变量）
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL", 
-        "postgresql+asyncpg://postgres:postgres@localhost/email_server"
+        "sqlite+aiosqlite:///./email_server.db"
     )
     
     # JWT配置
