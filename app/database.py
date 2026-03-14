@@ -9,11 +9,14 @@ from app.config import settings
 # 根据数据库类型配置连接池参数
 # SQLite不支持连接池，PostgreSQL/MySQL需要连接池
 if settings.DATABASE_URL.startswith("sqlite"):
-    # SQLite配置
+    # SQLite配置（增加超时时间避免锁定）
     engine = create_async_engine(
         settings.DATABASE_URL,
         echo=settings.DEBUG,
-        connect_args={"check_same_thread": False}  # SQLite特有参数
+        connect_args={
+            "check_same_thread": False,
+            "timeout": 30  # 增加超时时间到30秒
+        }
     )
 else:
     # PostgreSQL/MySQL配置（支持连接池）
