@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import init_db
 from app.api import auth_router, email_router, pages_router
+from app.services.smtp_server import smtp_server
 
 
 @asynccontextmanager
@@ -16,9 +17,16 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时初始化数据库
     await init_db()
+    
+    # 启动SMTP服务器（接收邮件）
+    smtp_server.start()
+    
     print(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} 启动成功!")
+    print(f"📧 SMTP服务器监听: {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+    print(f"🌐 Web界面: http://0.0.0.0:8000")
     yield
     # 关闭时清理资源
+    smtp_server.stop()
     print("👋 应用已关闭")
 
 
@@ -55,7 +63,8 @@ async def health_check():
     return {
         "status": "healthy",
         "app": settings.APP_NAME,
-        "version": settings.APP_VERSION
+        "version": settings.APP_VERSION,
+        "mail_domain": settings.MAIL_DOMAIN
     }
 
 
@@ -65,6 +74,5 @@ if __name__ == "__main__":
         "app.main:app",
         host="0.0.0.0",
         port=8000,
-        reload=settings.DEBUG,
-        workers=4  # 多worker提高并发性能
+        reload=settings.DEBUG
     )

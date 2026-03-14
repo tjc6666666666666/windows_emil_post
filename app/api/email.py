@@ -3,13 +3,12 @@
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from app.database import get_db
 from app.schemas.email import EmailSendRequest, EmailResponse, EmailListResponse
 from app.services.email_sender import email_sender_service
-from app.services.email_receiver import email_receiver_service
 from app.api.auth import get_current_user
-from app.models.user import User, Email
+from app.models.user import User, Email, EmailStatus
 
 
 router = APIRouter(prefix="/api/email", tags=["邮件"])
@@ -35,14 +34,17 @@ async def get_sent_emails(
 ):
     """获取已发送邮件列表"""
     # 查询总数
-    count_query = select(func.count(Email.id)).where(Email.sender_id == current_user.id)
+    count_query = select(func.count(Email.id)).where(
+        Email.sender_id == current_user.id,
+        Email.status == EmailStatus.SENT
+    )
     total = (await db.execute(count_query)).scalar()
     
     # 分页查询
     offset = (page - 1) * page_size
     query = (
         select(Email)
-        .where(Email.sender_id == current_user.id)
+        .where(Email.sender_id == current_user.id, Email.status == EmailStatus.SENT)
         .order_by(Email.created_at.desc())
         .offset(offset)
         .limit(page_size)
@@ -61,23 +63,61 @@ async def get_sent_emails(
 @router.get("/inbox")
 async def get_inbox_emails(
     limit: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
-    """获取收件箱邮件（从IMAP服务器）"""
-    emails = await email_receiver_service.fetch_emails(current_user, limit)
-    return {"emails": emails}
+    """获取收件箱邮件（从数据库）"""
+    # 查询接收到的邮件
+    query = (
+        select(Email)
+        .where(Email.recipient_id == current_user.id, Email.status == EmailStatus.RECEIVED)
+        .order_by(Email.created_at.desc())
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    emails = result.scalars().all()
+    
+    # 格式化返回数据
+    email_list = []
+    for email in emails:
+        email_list.append({
+            "id": str(email.id),
+            "from": email.from_addr,
+            "to": email.to_addr,
+            "subject": email.subject,
+            "date": email.created_at.isoformat(),
+        })
+    
+    return {"emails": email_list}
 
 
 @router.get("/inbox/{email_id}")
 async def get_email_detail(
-    email_id: str,
-    current_user: User = Depends(get_current_user)
+    email_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """获取邮件详情"""
-    email = await email_receiver_service.fetch_email_detail(current_user, email_id)
+    # 查询邮件
+    query = select(Email).where(
+        Email.id == email_id,
+        Email.recipient_id == current_user.id,
+        Email.status == EmailStatus.RECEIVED
+    )
+    result = await db.execute(query)
+    email = result.scalar_one_or_none()
+    
     if not email:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="邮件不存在"
         )
-    return email
+    
+    return {
+        "id": str(email.id),
+        "from": email.from_addr,
+        "to": email.to_addr,
+        "subject": email.subject,
+        "date": email.created_at.isoformat(),
+        "body": email.body
+    }
