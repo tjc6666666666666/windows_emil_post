@@ -3,7 +3,6 @@
 """
 import aiodns
 import aiosmtplib
-import dkim
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid
 from datetime import datetime
@@ -13,67 +12,10 @@ from fastapi import HTTPException, status
 from app.models.user import User, Email, EmailStatus
 from app.schemas.email import EmailSendRequest
 from app.config import settings
-from app.utils.dkim_utils import get_dkim_manager
 
 
 class EmailSenderService:
     """邮件发送服务"""
-    
-    def __init__(self):
-        """初始化邮件发送服务，自动初始化DKIM密钥"""
-        try:
-            self.dkim_manager = get_dkim_manager(selector="default", key_size=2048)
-            print("[邮件服务] DKIM密钥已初始化")
-        except Exception as e:
-            print(f"[邮件服务] DKIM初始化失败: {e}")
-            self.dkim_manager = None
-    
-    def _sign_with_dkim(self, message: EmailMessage, from_addr: str) -> bytes:
-        """
-        使用DKIM对邮件进行签名
-        
-        Args:
-            message: 待签名的邮件消息
-            from_addr: 发件人地址
-            
-        Returns:
-            签名后的邮件消息（字节串）
-        """
-        if not self.dkim_manager:
-            print("[DKIM] 警告: DKIM管理器未初始化，跳过签名")
-            return bytes(message)
-        
-        try:
-            # 获取发件人域名
-            domain = from_addr.split('@')[1]
-            
-            # 获取私钥
-            private_key_pem = self.dkim_manager.get_private_key_pem()
-            
-            # 构造DKIM签名器
-            selector = self.dkim_manager.selector.encode()
-            domain_bytes = domain.encode()
-            
-            # 将邮件转换为字节
-            message_bytes = bytes(message)
-            
-            # 创建DKIM签名 - 返回带签名的完整消息
-            signed_message = dkim.sign(
-                message_bytes,
-                selector,
-                domain_bytes,
-                private_key_pem,
-                include_headers=['From', 'To', 'Subject', 'Date', 'Message-ID']
-            )
-            
-            print(f"[DKIM] 邮件已签名 (域名: {domain}, 选择器: {self.dkim_manager.selector})")
-            return signed_message
-            
-        except Exception as e:
-            print(f"[DKIM] 签名失败: {e}")
-            import traceback
-            traceback.print_exc()
-            return bytes(message)
     
     async def resolve_mx_record(self, domain: str) -> str:
         """解析MX记录"""
@@ -112,9 +54,6 @@ class EmailSenderService:
             message["Message-ID"] = make_msgid(domain=settings.MAIL_DOMAIN)
             message.set_content(body)
             
-            # DKIM签名
-            signed_message = self._sign_with_dkim(message, from_addr)
-            
             # 异步发送（参考原email_sender.py的实现）
             print(f"正在连接 {mx_server}:25 并发送邮件...")
             async with aiosmtplib.SMTP(
@@ -130,8 +69,7 @@ class EmailSenderService:
                 except Exception:
                     pass  # 如果不支持STARTTLS，继续使用明文
                 
-                # 发送签名后的消息
-                await smtp.send_message(signed_message)
+                await smtp.send_message(message)
             
             print("邮件发送成功！")
             return True
@@ -159,12 +97,8 @@ class EmailSenderService:
             message["Message-ID"] = make_msgid(domain=settings.MAIL_DOMAIN)
             message.set_content(body)
             
-            # DKIM签名
-            signed_message = self._sign_with_dkim(message, from_addr)
-            
-            # 使用send方法发送字节串
             await aiosmtplib.send(
-                signed_message,
+                message,
                 hostname=settings.SMTP_HOST,
                 port=settings.SMTP_PORT,
                 username=settings.SMTP_USER or None,
