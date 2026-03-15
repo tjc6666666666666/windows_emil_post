@@ -1,6 +1,9 @@
 """
 Email Server - 主应用入口
 """
+import sys
+import os
+from pathlib import Path
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
@@ -12,6 +15,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import auth_router, email_router, pages_router, admin_router
 from app.services.smtp_server import smtp_server
 from app.services.dkim_signer import init_dkim_signer
+
+
+def get_resource_path(relative_path: str) -> Path:
+    """获取资源文件路径，支持 PyInstaller 打包"""
+    if getattr(sys, 'frozen', False):
+        # PyInstaller 打包后的路径
+        base_path = Path(sys._MEIPASS)
+    else:
+        # 开发环境路径
+        base_path = Path(__file__).parent.parent
+    return base_path / relative_path
 
 
 @asynccontextmanager
@@ -76,7 +90,8 @@ app.add_middleware(
 )
 
 # 挂载静态文件
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+static_dir = get_resource_path("app/static")
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # 注册路由
 app.include_router(auth_router)
