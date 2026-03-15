@@ -38,3 +38,21 @@
     </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    // 检查是否已初始化
+    try {
+        const response = await fetch('/api/admin/check-init');
+        const data = await response.json();
+
+        if (!data.initialized) {
+            window.location.href = '/setup';
+        }
+    } catch (error) {
+        console.error('检查初始化状态失败:', error);
+    }
+});
+</script>
+{% endblock %}

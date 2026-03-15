@@ -74,9 +74,15 @@ class EmailHandler:
             # 存储到数据库
             async with async_session_maker() as db:
                 for rcpt_to in rcpt_tos:
-                    # 查找收件人
+                    # 从邮箱地址解析用户名（格式：username@domain）
+                    if '@' in rcpt_to:
+                        username = rcpt_to.split('@')[0]
+                    else:
+                        username = rcpt_to
+
+                    # 查找收件人（根据用户名）
                     result = await db.execute(
-                        select(User).where(User.email == rcpt_to)
+                        select(User).where(User.username == username)
                     )
                     recipient = result.scalar_one_or_none()
                     

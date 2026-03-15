@@ -44,3 +44,21 @@ async def compose_page(request: Request):
 async def inbox_page(request: Request):
     """收件箱页面"""
     return templates.TemplateResponse("inbox.html", {"request": request})
+
+
+@router.get("/setup", response_class=HTMLResponse)
+async def setup_page(request: Request):
+    """初始化设置页面"""
+    return templates.TemplateResponse("setup.html", {"request": request})
+
+
+@router.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request):
+    """管理员页面"""
+    return templates.TemplateResponse("admin.html", {"request": request})
+
+
+@router.get("/profile", response_class=HTMLResponse)
+async def profile_page(request: Request):
+    """个人资料页面"""
+    return templates.TemplateResponse("profile.html", {"request": request})

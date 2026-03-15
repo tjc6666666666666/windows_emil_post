@@ -31,15 +31,30 @@
             updateNavbar();
         });
         
-        function updateNavbar() {
+        async function updateNavbar() {
             const token = localStorage.getItem('token');
             const navLinks = document.getElementById('navLinks');
-            
+
             if (token) {
+                let adminLink = '';
+                try {
+                    const response = await fetch('/api/auth/me', {
+                        headers: {'Authorization': `Bearer ${token}`}
+                    });
+                    if (response.ok) {
+                        const user = await response.json();
+                        if (user.is_admin) {
+                            adminLink = '<a href="/admin">管理员</a>';
+                        }
+                    }
+                } catch (e) {}
+
                 navLinks.innerHTML = `
                     <a href="/dashboard">控制面板</a>
                     <a href="/compose">写邮件</a>
                     <a href="/inbox">收件箱</a>
+                    ${adminLink}
+                    <a href="/profile">个人资料</a>
                     <a href="#" onclick="logout()">退出</a>
                 `;
             } else {

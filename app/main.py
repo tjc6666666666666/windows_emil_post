@@ -3,12 +3,13 @@ Email Server - 主应用入口
 """
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.database import init_db
-from app.api import auth_router, email_router, pages_router
+from app.database import init_db, get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.api import auth_router, email_router, pages_router, admin_router
 from app.services.smtp_server import smtp_server
 from app.services.dkim_signer import init_dkim_signer
 
@@ -60,16 +61,19 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(auth_router)
 app.include_router(email_router)
 app.include_router(pages_router)
+app.include_router(admin_router)
 
 
 @app.get("/api/health")
-async def health_check():
+async def health_check(db: AsyncSession = Depends(get_db)):
     """健康检查接口"""
+    from app.services.auth import auth_service
+    mail_domain = await auth_service.get_mail_domain(db)
     return {
         "status": "healthy",
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
-        "mail_domain": settings.MAIL_DOMAIN
+        "mail_domain": mail_domain
     }
 
 

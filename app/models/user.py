@@ -19,15 +19,16 @@ class EmailStatus(str, enum.Enum):
 class User(Base):
     """用户模型"""
     __tablename__ = "users"
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    email: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    # email 由 username + 当前域名动态生成，不存储在数据库中
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # 关联关系
     sent_emails: Mapped[list["Email"]] = relationship(
         "Email", back_populates="sender", foreign_keys="Email.sender_id"
@@ -35,9 +36,13 @@ class User(Base):
     received_emails: Mapped[list["Email"]] = relationship(
         "Email", back_populates="recipient", foreign_keys="Email.recipient_id"
     )
-    
+
+    def get_email(self, mail_domain: str) -> str:
+        """根据域名动态生成邮箱地址"""
+        return f"{self.username}@{mail_domain}"
+
     def __repr__(self):
-        return f"<User(id={self.id}, username={self.username}, email={self.email})>"
+        return f"<User(id={self.id}, username={self.username})>"
 
 
 class Email(Base):

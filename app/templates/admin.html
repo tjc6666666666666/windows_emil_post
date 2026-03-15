@@ -1,0 +1,619 @@
+{% extends "base.html" %}
+
+{% block title %}管理员面板 - Email Server{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h2>管理员面板</h2>
+
+    <div class="admin-tabs">
+        <button class="tab-btn active" onclick="showTab('users')">用户管理</button>
+        <button class="tab-btn" onclick="showTab('config')">服务器配置</button>
+    </div>
+
+    <!-- 用户管理 -->
+    <div id="usersTab" class="tab-content active">
+        <div class="section-header">
+            <h3>用户列表</h3>
+            <button class="btn-add" onclick="showAddUserModal()">+ 添加用户</button>
+        </div>
+        <div id="usersList" class="users-list">
+            <p class="loading">加载中...</p>
+        </div>
+    </div>
+
+    <!-- 服务器配置 -->
+    <div id="configTab" class="tab-content">
+        <h3>服务器配置</h3>
+        <form id="configForm">
+            <div class="form-group">
+                <label for="mailDomain">邮件域名</label>
+                <input type="text" id="mailDomain" name="mailDomain" required>
+                <small>用户邮箱将为: username@邮件域名</small>
+            </div>
+            <div class="form-group">
+                <label for="smtpHostname">SMTP主机名</label>
+                <input type="text" id="smtpHostname" name="smtpHostname" required>
+                <small>用于SMTP HELO标识，需有有效的A记录</small>
+            </div>
+            <div class="form-group">
+                <label class="toggle-label">
+                    <input type="checkbox" id="allowRegistration" name="allowRegistration">
+                    <span class="toggle-switch"></span>
+                    允许新用户注册
+                </label>
+                <small>关闭后普通用户无法注册，管理员仍可创建用户</small>
+            </div>
+            <button type="submit" class="btn-primary">保存配置</button>
+        </form>
+    </div>
+</div>
+
+<!-- 添加用户模态框 -->
+<div id="addUserModal" class="modal">
+    <div class="modal-content">
+        <h3>添加用户</h3>
+        <form id="addUserForm">
+            <div class="form-group">
+                <label for="newUsername">用户名</label>
+                <input type="text" id="newUsername" name="username" required minlength="3" maxlength="50">
+            </div>
+            <div class="form-group">
+                <label for="newPassword">密码</label>
+                <input type="password" id="newPassword" name="password" required minlength="6">
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="newIsAdmin" name="isAdmin">
+                    设为管理员
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="hideAddUserModal()">取消</button>
+                <button type="submit" class="btn-primary">添加</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.admin-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.admin-container h2 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.admin-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+}
+
+.tab-btn {
+    padding: 12px 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    color: #7f8c8d;
+    transition: all 0.3s;
+}
+
+.tab-btn.active {
+    color: #3498db;
+    border-bottom: 2px solid #3498db;
+    margin-bottom: -2px;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-header h3 {
+    margin: 0;
+    color: #34495e;
+}
+
+.btn-add {
+    padding: 10px 20px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-add:hover {
+    background: #229954;
+}
+
+.users-list {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.user-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.user-item:last-child {
+    border-bottom: none;
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-name {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.user-email {
+    font-size: 13px;
+    color: #7f8c8d;
+    margin-top: 3px;
+}
+
+.user-badges {
+    margin-top: 5px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin-right: 5px;
+}
+
+.badge-admin {
+    background: #e74c3c;
+    color: white;
+}
+
+.badge-active {
+    background: #27ae60;
+    color: white;
+}
+
+.badge-inactive {
+    background: #95a5a6;
+    color: white;
+}
+
+.user-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: opacity 0.3s;
+}
+
+.btn-sm:hover {
+    opacity: 0.8;
+}
+
+.btn-admin {
+    background: #3498db;
+    color: white;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    color: white;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #34495e;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #95a5a6;
+    font-size: 12px;
+}
+
+.toggle-label {
+    display: flex !important;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
+.toggle-label input {
+    display: none;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 50px;
+    height: 28px;
+    background: #bdc3c7;
+    border-radius: 14px;
+    margin-right: 12px;
+    transition: background 0.3s;
+    flex-shrink: 0;
+}
+
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-label input:checked + .toggle-switch {
+    background: #27ae60;
+}
+
+.toggle-label input:checked + .toggle-switch::after {
+    transform: translateX(22px);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.checkbox-label input {
+    width: auto;
+}
+
+.btn-primary {
+    padding: 12px 24px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-secondary {
+    padding: 12px 24px;
+    background: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+}
+
+.modal-content h3 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #7f8c8d;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentUser = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
+    loadCurrentUser();
+    loadUsers();
+    loadConfig();
+});
+
+async function loadCurrentUser() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+        const response = await fetch('/api/auth/me', {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+        if (response.ok) {
+            currentUser = await response.json();
+            if (!currentUser.is_admin) {
+                showMessage('需要管理员权限', 'error');
+                setTimeout(() => window.location.href = '/dashboard', 1500);
+            }
+        }
+    } catch (error) {
+        console.error('获取用户信息失败:', error);
+    }
+}
+
+function showTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+    document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+    document.getElementById(tabName + 'Tab').classList.add('active');
+}
+
+async function loadUsers() {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch('/api/auth/users', {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+
+        if (!response.ok) {
+            throw new Error('加载用户列表失败');
+        }
+
+        const users = await response.json();
+        renderUsers(users);
+    } catch (error) {
+        document.getElementById('usersList').innerHTML = `<p class="loading">${error.message}</p>`;
+    }
+}
+
+function renderUsers(users) {
+    if (users.length === 0) {
+        document.getElementById('usersList').innerHTML = '<p class="loading">暂无用户</p>';
+        return;
+    }
+
+    const html = users.map(user => `
+        <div class="user-item">
+            <div class="user-info">
+                <div class="user-name">${user.username}</div>
+                <div class="user-email">${user.email}</div>
+                <div class="user-badges">
+                    ${user.is_admin ? '<span class="badge badge-admin">管理员</span>' : ''}
+                    <span class="badge ${user.is_active ? 'badge-active' : 'badge-inactive'}">
+                        ${user.is_active ? '活跃' : '禁用'}
+                    </span>
+                </div>
+            </div>
+            ${user.id !== currentUser?.id ? `
+                <div class="user-actions">
+                    <button class="btn-sm btn-admin" onclick="toggleAdmin(${user.id}, ${user.is_admin})">
+                        ${user.is_admin ? '取消管理员' : '设为管理员'}
+                    </button>
+                    <button class="btn-sm btn-delete" onclick="deleteUser(${user.id}, '${user.username}')">
+                        删除
+                    </button>
+                </div>
+            ` : '<div class="user-actions"><span style="color: #95a5a6;">当前用户</span></div>'}
+        </div>
+    `).join('');
+
+    document.getElementById('usersList').innerHTML = html;
+}
+
+async function loadConfig() {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch('/api/admin/config', {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+
+        if (response.ok) {
+            const config = await response.json();
+            document.getElementById('mailDomain').value = config.mail_domain;
+            document.getElementById('smtpHostname').value = config.smtp_helo_hostname;
+            document.getElementById('allowRegistration').checked = config.allow_registration;
+        }
+    } catch (error) {
+        console.error('加载配置失败:', error);
+    }
+}
+
+document.getElementById('configForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    const mailDomain = document.getElementById('mailDomain').value;
+    const smtpHostname = document.getElementById('smtpHostname').value;
+    const allowRegistration = document.getElementById('allowRegistration').checked;
+
+    try {
+        const response = await fetch('/api/admin/config', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                mail_domain: mailDomain,
+                smtp_helo_hostname: smtpHostname,
+                allow_registration: allowRegistration
+            })
+        });
+
+        if (response.ok) {
+            showMessage('配置保存成功', 'success');
+        } else {
+            const error = await response.json();
+            throw new Error(error.detail || '保存失败');
+        }
+    } catch (error) {
+        showMessage(error.message, 'error');
+    }
+});
+
+function showAddUserModal() {
+    document.getElementById('addUserModal').classList.add('show');
+}
+
+function hideAddUserModal() {
+    document.getElementById('addUserModal').classList.remove('show');
+    document.getElementById('addUserForm').reset();
+}
+
+document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    const username = document.getElementById('newUsername').value;
+    const password = document.getElementById('newPassword').value;
+    const isAdmin = document.getElementById('newIsAdmin').checked;
+
+    try {
+        const response = await fetch('/api/auth/users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                username,
+                password,
+                is_admin: isAdmin
+            })
+        });
+
+        if (response.ok) {
+            showMessage('用户添加成功', 'success');
+            hideAddUserModal();
+            loadUsers();
+        } else {
+            const error = await response.json();
+            throw new Error(error.detail || '添加失败');
+        }
+    } catch (error) {
+        showMessage(error.message, 'error');
+    }
+});
+
+async function toggleAdmin(userId, currentIsAdmin) {
+    const token = localStorage.getItem('token');
+    if (!confirm(`确定要${currentIsAdmin ? '取消' : '授予'}该用户的管理员权限吗？`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/auth/users/${userId}/toggle-admin`, {
+            method: 'PUT',
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+
+        if (response.ok) {
+            showMessage('权限已更新', 'success');
+            loadUsers();
+        } else {
+            const error = await response.json();
+            throw new Error(error.detail || '操作失败');
+        }
+    } catch (error) {
+        showMessage(error.message, 'error');
+    }
+}
+
+async function deleteUser(userId, username) {
+    if (!confirm(`确定要删除用户 "${username}" 吗？此操作不可恢复！`)) {
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`/api/auth/users/${userId}`, {
+            method: 'DELETE',
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+
+        if (response.ok) {
+            showMessage('用户已删除', 'success');
+            loadUsers();
+        } else {
+            const error = await response.json();
+            throw new Error(error.detail || '删除失败');
+        }
+    } catch (error) {
+        showMessage(error.message, 'error');
+    }
+}
+</script>
+{% endblock %}

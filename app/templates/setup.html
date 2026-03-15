@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}初始化设置 - Email Server{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+    <div class="setup-box">
+        <h2>🎉 欢迎使用 Email Server</h2>
+        <p class="setup-desc">这是首次使用，请设置管理员账户和服务器配置</p>
+
+        <form id="setupForm">
+            <div class="form-section">
+                <h3>👤 管理员账户</h3>
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" required minlength="3" maxlength="50"
+                           placeholder="请输入用户名（仅字母和数字）">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" required minlength="6"
+                           placeholder="请输入密码（至少6位）">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">确认密码</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required minlength="6"
+                           placeholder="请再次输入密码">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>🌐 服务器配置</h3>
+                <div class="form-group">
+                    <label for="mailDomain">邮件域名</label>
+                    <input type="text" id="mailDomain" name="mailDomain" required
+                           placeholder="例如: example.com">
+                    <small>用户邮箱将为: username@邮件域名</small>
+                </div>
+                <div class="form-group">
+                    <label for="smtpHostname">SMTP主机名</label>
+                    <input type="text" id="smtpHostname" name="smtpHostname" required
+                           placeholder="例如: mail.example.com">
+                    <small>用于SMTP HELO标识，需有有效的A记录</small>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary">完成设置</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.setup-container {
+    min-height: calc(100vh - 200px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.setup-box {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 500px;
+}
+
+.setup-box h2 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.setup-desc {
+    text-align: center;
+    color: #7f8c8d;
+    margin-bottom: 30px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.form-section h3 {
+    margin-bottom: 20px;
+    color: #34495e;
+    font-size: 1.1em;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #34495e;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #95a5a6;
+    font-size: 12px;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-primary:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    // 检查是否已初始化
+    try {
+        const response = await fetch('/api/admin/check-init');
+        const data = await response.json();
+
+        if (data.initialized) {
+            showMessage('系统已初始化，正在跳转...', 'info');
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 1500);
+        }
+    } catch (error) {
+        console.error('检查初始化状态失败:', error);
+    }
+});
+
+document.getElementById('setupForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const mailDomain = document.getElementById('mailDomain').value;
+    const smtpHostname = document.getElementById('smtpHostname').value;
+
+    // 验证密码
+    if (password !== confirmPassword) {
+        showMessage('两次输入的密码不一致', 'error');
+        return;
+    }
+
+    // 验证用户名
+    if (!/^[a-zA-Z0-9]+$/.test(username)) {
+        showMessage('用户名只能包含字母和数字', 'error');
+        return;
+    }
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '设置中...';
+
+    try {
+        // 1. 创建管理员账户（第一个用户自动成为管理员）
+        const registerResponse = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, password})
+        });
+
+        if (!registerResponse.ok) {
+            const error = await registerResponse.json();
+            throw new Error(error.detail || '创建管理员账户失败');
+        }
+
+        // 2. 登录获取token
+        const loginResponse = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+        });
+
+        if (!loginResponse.ok) {
+            throw new Error('登录失败');
+        }
+
+        const loginData = await loginResponse.json();
+        const token = loginData.access_token;
+
+        // 3. 更新服务器配置
+        const configResponse = await fetch('/api/admin/config', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                mail_domain: mailDomain,
+                smtp_helo_hostname: smtpHostname
+            })
+        });
+
+        if (!configResponse.ok) {
+            throw new Error('保存服务器配置失败');
+        }
+
+        // 保存token
+        localStorage.setItem('token', token);
+
+        showMessage('设置成功！正在跳转...', 'success');
+        setTimeout(() => {
+            window.location.href = '/dashboard';
+        }, 1500);
+
+    } catch (error) {
+        showMessage(error.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '完成设置';
+    }
+});
+</script>
+{% endblock %}
