@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     
     # 邮件服务器域名（用户注册后自动获得 username@MAIL_DOMAIN 邮箱）
-    MAIL_DOMAIN: str = os.getenv("MAIL_DOMAIN", "453627.xyz")
+    MAIL_DOMAIN: str = os.getenv("MAIL_DOMAIN", "453627123.xyz")
     
     # 数据库配置（默认使用SQLite，如需PostgreSQL请设置DATABASE_URL环境变量）
     DATABASE_URL: str = os.getenv(
