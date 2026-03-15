@@ -4,7 +4,7 @@ import ctypes
 import aiodns
 import aiosmtplib
 from email.message import EmailMessage
-from email.utils import formatdate
+from email.utils import formatdate, make_msgid
 from datetime import datetime
 
 
@@ -39,6 +39,7 @@ async def send_direct_email():
         message["To"] = TO_ADDR
         message["Subject"] = SUBJECT
         message["Date"] = formatdate(localtime=True)
+        message["Message-ID"] = make_msgid(domain="453627.xyz")
         message.set_content(BODY)
 
         # 4. 异步投递

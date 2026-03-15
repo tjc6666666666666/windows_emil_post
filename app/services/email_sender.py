@@ -4,7 +4,7 @@
 import aiodns
 import aiosmtplib
 from email.message import EmailMessage
-from email.utils import formatdate
+from email.utils import formatdate, make_msgid
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -51,6 +51,7 @@ class EmailSenderService:
             message["To"] = to_addr
             message["Subject"] = subject
             message["Date"] = formatdate(localtime=True)
+            message["Message-ID"] = make_msgid(domain=settings.MAIL_DOMAIN)
             message.set_content(body)
             
             # 异步发送（参考原email_sender.py的实现）
@@ -93,6 +94,7 @@ class EmailSenderService:
             message["To"] = to_addr
             message["Subject"] = subject
             message["Date"] = formatdate(localtime=True)
+            message["Message-ID"] = make_msgid(domain=settings.MAIL_DOMAIN)
             message.set_content(body)
             
             await aiosmtplib.send(
