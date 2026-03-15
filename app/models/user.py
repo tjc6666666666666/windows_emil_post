@@ -58,6 +58,7 @@ class Email(Base):
     to_addr: Mapped[str] = mapped_column(String(255), nullable=False)
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=True)
+    html_body: Mapped[str] = mapped_column(Text, nullable=True)  # HTML格式正文
     
     # 邮件状态
     status: Mapped[EmailStatus] = mapped_column(

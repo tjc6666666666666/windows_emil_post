@@ -100,7 +100,27 @@ async function viewEmail(emailId) {
             document.getElementById('modalFrom').textContent = email.from;
             document.getElementById('modalTo').textContent = email.to;
             document.getElementById('modalDate').textContent = email.date;
-            document.getElementById('modalBody').textContent = email.body || '无内容';
+            
+            // 优先显示HTML格式，否则显示纯文本
+            const modalBody = document.getElementById('modalBody');
+            if (email.html_body) {
+                // 使用iframe安全渲染HTML内容
+                modalBody.innerHTML = '<iframe id="htmlFrame" style="width:100%;border:none;min-height:400px;background:#fff;"></iframe>';
+                const iframe = document.getElementById('htmlFrame');
+                iframe.contentDocument.write(email.html_body);
+                iframe.contentDocument.close();
+                // 自动调整iframe高度
+                iframe.onload = function() {
+                    iframe.style.height = iframe.contentDocument.body.scrollHeight + 'px';
+                };
+            } else {
+                modalBody.innerHTML = '';
+                const pre = document.createElement('pre');
+                pre.style.whiteSpace = 'pre-wrap';
+                pre.style.wordWrap = 'break-word';
+                pre.textContent = email.body || '无内容';
+                modalBody.appendChild(pre);
+            }
             
             document.getElementById('emailModal').style.display = 'block';
         }

@@ -119,5 +119,6 @@ async def get_email_detail(
         "to": email.to_addr,
         "subject": email.subject,
         "date": email.created_at.isoformat(),
-        "body": email.body
+        "body": email.body,
+        "html_body": email.html_body
     }

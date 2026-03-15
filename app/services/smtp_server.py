@@ -57,15 +57,19 @@ class EmailHandler:
             message = message_from_bytes(envelope.content)
             subject = decode_email_header(message.get('Subject'), '(无主题)')
             
-            # 获取邮件正文
+            # 获取邮件正文（同时提取纯文本和HTML格式）
             body = ""
+            html_body = ""
             if message.is_multipart():
                 for part in message.walk():
-                    if part.get_content_type() == "text/plain":
-                        payload = part.get_payload(decode=True)
-                        if payload:
-                            body = payload.decode('utf-8', errors='ignore')
-                            break
+                    content_type = part.get_content_type()
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        decoded = payload.decode('utf-8', errors='ignore')
+                        if content_type == "text/plain" and not body:
+                            body = decoded
+                        elif content_type == "text/html" and not html_body:
+                            html_body = decoded
             else:
                 payload = message.get_payload(decode=True)
                 if payload:
@@ -95,6 +99,7 @@ class EmailHandler:
                             to_addr=rcpt_to,
                             subject=subject,
                             body=body,
+                            html_body=html_body,
                             status=EmailStatus.RECEIVED,
                             created_at=datetime.utcnow()
                         )
