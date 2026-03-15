@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+build/
+dist/
+downloads/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# uv
+.uv/
+uv.lock
+
+# PyInstaller
+*.spec
+*.manifest
+*.exe
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# DKIM keys
+*.pem
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
