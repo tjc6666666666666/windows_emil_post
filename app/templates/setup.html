@@ -3,6 +3,141 @@
 {% block title %}初始化设置 - Email Server{% endblock %}
 
 {% block content %}
+<!-- 免责声明弹窗 -->
+<div class="disclaimer-overlay" id="disclaimerOverlay">
+    <div class="disclaimer-modal">
+        <div class="disclaimer-header">
+            <h1>⚠️ 重要提示 - 请仔细阅读</h1>
+            <p class="disclaimer-subtitle">Email Server 开源项目使用协议与免责声明</p>
+        </div>
+        
+        <div class="disclaimer-content" id="disclaimerContent">
+            <!-- 滚动提示 -->
+            <div class="scroll-hint" id="scrollHint">
+                <span>👇 请向下滚动阅读完整内容 👇</span>
+            </div>
+            
+            <div class="disclaimer-section">
+                <h2>📜 项目声明</h2>
+                <p>Email Server 是一个<strong>完全开源、免费</strong>的邮件服务器项目，遵循开源协议发布。</p>
+                <ul>
+                    <li>本项目仅供<strong>学习研究、个人非商业用途</strong>使用</li>
+                    <li>项目源代码公开，任何人都可以查看、学习和改进</li>
+                    <li>本项目不提供任何形式的商业授权</li>
+                </ul>
+            </div>
+
+            <div class="disclaimer-section warning">
+                <h2>🚫 禁止事项</h2>
+                <p><strong>以下行为被严格禁止，违者将承担相应法律责任：</strong></p>
+                <ul>
+                    <li>❌ <strong>禁止商业贩卖</strong> - 不得将本项目或其衍生作品用于任何形式的商业销售、收费服务</li>
+                    <li>❌ <strong>禁止恶意使用</strong> - 不得用于发送垃圾邮件、钓鱼邮件、诈骗邮件等违法行为</li>
+                    <li>❌ <strong>禁止非法用途</strong> - 不得用于传播违法信息、侵犯他人权益的活动</li>
+                    <li>❌ <strong>禁止删除版权声明</strong> - 使用本项目时须保留原始版权和许可声明</li>
+                    <li>❌ <strong>禁止虚假宣传</strong> - 不得声称本项目由您开发或拥有</li>
+                </ul>
+            </div>
+
+            <div class="disclaimer-section danger">
+                <h2>⚖️ 免责声明</h2>
+                <p><strong>使用本软件即表示您已完全理解并同意以下条款：</strong></p>
+                
+                <div class="warning-box">
+                    <h3>一、无担保声明</h3>
+                    <p>本软件按"现状"提供，<strong>不提供任何明示或暗示的担保</strong>，包括但不限于：</p>
+                    <ul>
+                        <li>不保证软件功能符合您的特定需求</li>
+                        <li>不保证软件运行的稳定性、可靠性和安全性</li>
+                        <li>不保证软件不会对您的系统造成损害</li>
+                        <li>不保证软件不会导致数据丢失或泄露</li>
+                    </ul>
+                </div>
+
+                <div class="warning-box">
+                    <h3>二、风险告知</h3>
+                    <p><strong>使用本软件存在以下风险，您需自行评估并承担：</strong></p>
+                    <ul>
+                        <li>📋 <strong>数据风险</strong> - 邮件数据可能丢失、损坏或被未授权访问</li>
+                        <li>🔒 <strong>安全风险</strong> - 可能存在未知的安全漏洞，导致系统被攻击</li>
+                        <li>📧 <strong>邮件投递风险</strong> - 发送的邮件可能被拒收、标记为垃圾邮件或延迟送达</li>
+                        <li>🌐 <strong>网络风险</strong> - 服务器可能遭受网络攻击、DDoS攻击等</li>
+                        <li>💻 <strong>系统风险</strong> - 可能与其他软件产生冲突，导致系统异常</li>
+                        <li>📜 <strong>法律风险</strong> - 使用不当可能违反当地法律法规</li>
+                    </ul>
+                </div>
+
+                <div class="warning-box">
+                    <h3>三、责任免除</h3>
+                    <p><strong>在任何情况下，以下主体不承担任何责任：</strong></p>
+                    <ul>
+                        <li>本项目开发者和贡献者</li>
+                        <li>本项目的所有关联方</li>
+                    </ul>
+                    <p>无论因何种原因（包括但不限于使用或无法使用本软件、软件中的任何内容、或因使用本软件导致的任何损害），上述主体均不承担以下责任：</p>
+                    <ul>
+                        <li>任何直接、间接、偶然、特殊、惩罚性或后果性的损害</li>
+                        <li>数据丢失、利润损失、业务中断等损失</li>
+                        <li>任何第三方索赔</li>
+                        <li>任何法律纠纷或处罚</li>
+                    </ul>
+                </div>
+
+                <div class="warning-box">
+                    <h3>四、用户责任</h3>
+                    <p><strong>您使用本软件时需自行承担以下责任：</strong></p>
+                    <ul>
+                        <li>确保您的使用行为符合当地法律法规</li>
+                        <li>自行备份重要数据，并对数据安全负责</li>
+                        <li>自行配置和维护服务器安全</li>
+                        <li>自行承担因使用本软件产生的所有费用</li>
+                        <li>因您的使用行为导致的任何法律责任，由您自行承担</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="disclaimer-section">
+                <h2>📧 关于邮件服务</h2>
+                <p>本项目提供邮件收发功能，请您注意：</p>
+                <ul>
+                    <li>邮件的投递成功率受多种因素影响，包括但不限于：DNS配置、IP信誉、接收方策略等</li>
+                    <li>发送的邮件可能被接收方标记为垃圾邮件，这不属于软件缺陷</li>
+                    <li>请遵守相关法律法规，不得利用本项目发送违法信息</li>
+                    <li>您需自行配置并维护DNS记录（MX、SPF、DKIM、DMARC等）</li>
+                    <li>邮件服务器需要正确的反向DNS（PTR）记录，请联系您的服务器提供商配置</li>
+                </ul>
+            </div>
+
+            <div class="disclaimer-section notice">
+                <h2>✅ 用户确认</h2>
+                <p>点击"我已阅读并同意"按钮，即表示您确认：</p>
+                <ul>
+                    <li>您已完整阅读并理解上述所有内容</li>
+                    <li>您是具有完全民事行为能力的自然人或合法实体</li>
+                    <li>您自愿使用本软件，并愿意承担使用过程中的一切风险和后果</li>
+                    <li>您同意不追究本项目作者及贡献者的任何责任</li>
+                    <li>您承诺不将本软件用于任何违法、违规或商业贩卖目的</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="disclaimer-footer">
+            <label class="disclaimer-checkbox">
+                <input type="checkbox" id="agreeCheckbox">
+                <span>我已仔细阅读并完全理解以上所有内容，同意承担使用本软件的全部风险和责任</span>
+            </label>
+            <div class="disclaimer-buttons">
+                <button class="btn-disagree" onclick="window.location.href='https://github.com/tjc6666666666666/windows_emil_post'">
+                    我不同意，离开
+                </button>
+                <button class="btn-agree" id="agreeBtn" disabled onclick="agreeDisclaimer()">
+                    我已阅读并同意
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="setup-container">
     <div class="setup-box" id="setupFormBox">
         <h2>🎉 欢迎使用 Email Server</h2>
@@ -185,6 +320,289 @@
 </div>
 
 <style>
+/* 免责声明弹窗样式 */
+.disclaimer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.disclaimer-modal {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 900px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.disclaimer-header {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    padding: 25px 30px;
+    border-radius: 16px 16px 0 0;
+    text-align: center;
+}
+
+.disclaimer-header h1 {
+    margin: 0 0 8px 0;
+    font-size: 1.6em;
+}
+
+.disclaimer-subtitle {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1em;
+}
+
+.disclaimer-content {
+    padding: 25px 30px;
+    overflow-y: auto;
+    flex: 1;
+    max-height: 50vh;
+    position: relative;
+}
+
+/* 滚动提示样式 */
+.scroll-hint {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(to bottom, #fff 0%, #fff 60%, transparent 100%);
+    padding: 15px 20px 30px 20px;
+    text-align: center;
+    z-index: 10;
+    margin: -25px -30px 15px -30px;
+}
+
+.scroll-hint span {
+    display: inline-block;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    padding: 10px 25px;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: 500;
+    animation: bounce 2s infinite;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-8px);
+    }
+    60% {
+        transform: translateY(-4px);
+    }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.4); }
+    50% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(39, 174, 96, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+}
+
+.disclaimer-section {
+    margin-bottom: 25px;
+    padding: 20px;
+    border-radius: 10px;
+    background: #f8f9fa;
+    border-left: 4px solid #3498db;
+}
+
+.disclaimer-section h2 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.15em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.disclaimer-section p {
+    margin: 0 0 12px 0;
+    color: #34495e;
+    line-height: 1.7;
+}
+
+.disclaimer-section ul {
+    margin: 10px 0 0 0;
+    padding-left: 20px;
+}
+
+.disclaimer-section li {
+    margin-bottom: 8px;
+    color: #34495e;
+    line-height: 1.6;
+}
+
+.disclaimer-section.warning {
+    background: #fff3cd;
+    border-left-color: #f39c12;
+}
+
+.disclaimer-section.danger {
+    background: #ffe6e6;
+    border-left-color: #e74c3c;
+}
+
+.disclaimer-section.notice {
+    background: #e8f5e9;
+    border-left-color: #27ae60;
+}
+
+.warning-box {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #e0e0e0;
+}
+
+.warning-box:last-child {
+    margin-bottom: 0;
+}
+
+.warning-box h3 {
+    margin: 0 0 10px 0;
+    color: #c0392b;
+    font-size: 1em;
+}
+
+.warning-box p {
+    margin: 0 0 10px 0;
+    color: #34495e;
+}
+
+.warning-box ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.disclaimer-footer {
+    padding: 20px 30px;
+    background: #f8f9fa;
+    border-radius: 0 0 16px 16px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.disclaimer-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    transition: all 0.3s;
+}
+
+.disclaimer-checkbox:hover {
+    border-color: #3498db;
+}
+
+.disclaimer-checkbox.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #f5f5f5;
+}
+
+.disclaimer-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.disclaimer-checkbox input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.disclaimer-checkbox span {
+    color: #34495e;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.disclaimer-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.btn-disagree {
+    padding: 14px 30px;
+    background: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-disagree:hover {
+    background: #7f8c8d;
+}
+
+.btn-agree {
+    padding: 14px 30px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.btn-agree:hover:not(:disabled) {
+    background: #219a52;
+    transform: translateY(-1px);
+}
+
+.btn-agree:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+}
+
+/* 原有样式 */
 .setup-container {
     min-height: calc(100vh - 200px);
     display: flex;
@@ -382,6 +800,101 @@
 
 {% block scripts %}
 <script>
+// 免责声明相关逻辑
+document.addEventListener('DOMContentLoaded', function() {
+    const agreeCheckbox = document.getElementById('agreeCheckbox');
+    const agreeBtn = document.getElementById('agreeBtn');
+    const disclaimerOverlay = document.getElementById('disclaimerOverlay');
+    const disclaimerContent = document.getElementById('disclaimerContent');
+    const scrollHint = document.getElementById('scrollHint');
+    
+    // 检查是否已同意免责声明
+    const agreed = localStorage.getItem('disclaimer_agreed');
+    if (agreed === 'true') {
+        disclaimerOverlay.style.display = 'none';
+        return;
+    }
+    
+    // 初始状态：禁用复选框和按钮
+    agreeCheckbox.disabled = true;
+    agreeBtn.disabled = true;
+    const checkboxLabel = document.querySelector('.disclaimer-checkbox');
+    checkboxLabel.classList.add('disabled');
+    
+    let hasScrolledToBottom = false;
+    
+    // 监听滚动事件
+    disclaimerContent.addEventListener('scroll', function() {
+        const scrollTop = this.scrollTop;
+        const scrollHeight = this.scrollHeight;
+        const clientHeight = this.clientHeight;
+        
+        // 判断是否滚动到底部（允许5px误差）
+        if (scrollTop + clientHeight >= scrollHeight - 5) {
+            if (!hasScrolledToBottom) {
+                hasScrolledToBottom = true;
+                // 启用复选框
+                agreeCheckbox.disabled = false;
+                checkboxLabel.classList.remove('disabled');
+                // 隐藏滚动提示
+                scrollHint.style.display = 'none';
+                // 添加提示效果
+                checkboxLabel.style.borderColor = '#27ae60';
+                checkboxLabel.style.animation = 'pulse 0.5s ease-out';
+            }
+        }
+    });
+    
+    // 复选框状态变化
+    agreeCheckbox.addEventListener('change', function() {
+        agreeBtn.disabled = !this.checked;
+    });
+    
+    // 点击复选框时检查是否已滚动到底部
+    agreeCheckbox.addEventListener('click', function(e) {
+        if (!hasScrolledToBottom) {
+            e.preventDefault();
+            // 提示用户需要先滚动到底部
+            scrollHint.style.animation = 'none';
+            scrollHint.offsetHeight; // 触发重绘
+            scrollHint.style.animation = 'shake 0.5s ease-out';
+            disclaimerContent.scrollTo({
+                top: disclaimerContent.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    });
+});
+
+function agreeDisclaimer() {
+    const checkbox = document.getElementById('agreeCheckbox');
+    if (!checkbox.checked) {
+        alert('请先勾选同意条款');
+        return;
+    }
+    
+    // 保存同意状态
+    localStorage.setItem('disclaimer_agreed', 'true');
+    
+    // 隐藏弹窗
+    const overlay = document.getElementById('disclaimerOverlay');
+    overlay.style.animation = 'fadeOut 0.3s ease-out';
+    setTimeout(() => {
+        overlay.style.display = 'none';
+    }, 300);
+}
+
+// 添加淡出动画样式
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+
+// 原有初始化检查逻辑
 document.addEventListener('DOMContentLoaded', async function() {
     // 检查是否已初始化
     try {
