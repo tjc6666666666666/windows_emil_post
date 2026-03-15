@@ -105,3 +105,29 @@ async def check_init(db: AsyncSession = Depends(get_db)):
         "user_count": len(users),
         "allow_registration": allow_registration.lower() == "true"
     }
+
+
+@router.get("/dns-config")
+async def get_dns_config(
+    current_admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取DNS配置信息（仅管理员）"""
+    from app.services.dkim_signer import get_dkim_signer
+    from app.config import settings
+
+    # 获取域名配置
+    mail_domain = await get_config_value(db, "mail_domain", settings.MAIL_DOMAIN)
+    smtp_hostname = await get_config_value(db, "smtp_helo_hostname", settings.SMTP_HELO_HOSTNAME)
+
+    # 获取DKIM公钥记录
+    dkim_signer = get_dkim_signer()
+    dkim_record = dkim_signer.get_public_key_dns_record()
+    dkim_selector = dkim_signer.DKIM_SELECTOR
+
+    return {
+        "mail_domain": mail_domain,
+        "smtp_hostname": smtp_hostname,
+        "dkim_selector": dkim_selector,
+        "dkim_record": dkim_record
+    }

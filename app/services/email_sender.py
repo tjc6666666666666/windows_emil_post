@@ -77,7 +77,7 @@ class EmailSenderService:
             # 添加DKIM签名
             try:
                 dkim_signer = get_dkim_signer()
-                message = dkim_signer.sign_email(message)
+                message = dkim_signer.sign_email(message, domain=mail_domain)
             except Exception as e:
                 print(f"[DKIM] 签名失败: {e}")
 

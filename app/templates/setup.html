@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="setup-container">
-    <div class="setup-box">
+    <div class="setup-box" id="setupFormBox">
         <h2>🎉 欢迎使用 Email Server</h2>
         <p class="setup-desc">这是首次使用，请设置管理员账户和服务器配置</p>
 
@@ -47,6 +47,141 @@
             <button type="submit" class="btn-primary">完成设置</button>
         </form>
     </div>
+
+    <!-- DNS配置指南 -->
+    <div class="setup-box" id="dnsConfigBox" style="display: none;">
+        <h2>✅ 设置完成！请配置DNS记录</h2>
+        <p class="setup-desc">为确保邮件正常收发，请在您的DNS服务商处添加以下记录</p>
+
+        <div class="dns-section">
+            <h3>📬 MX 记录（邮件交换记录）</h3>
+            <div class="dns-record">
+                <div class="record-row">
+                    <span class="record-label">类型:</span>
+                    <code>MX</code>
+                </div>
+                <div class="record-row">
+                    <span class="record-label">主机:</span>
+                    <code id="mxHost">@</code>
+                </div>
+                <div class="record-row">
+                    <span class="record-label">值:</span>
+                    <code id="mxValue"></code>
+                </div>
+                <div class="record-row">
+                    <span class="record-label">优先级:</span>
+                    <code>10</code>
+                </div>
+            </div>
+            <p class="dns-note">用于接收邮件，指定邮件服务器的地址</p>
+        </div>
+
+        <div class="dns-section">
+            <h3>🔑 DKIM 记录（域名密钥识别）</h3>
+            <div class="dns-record">
+                <div class="record-row">
+                    <span class="record-label">类型:</span>
+                    <code>TXT</code>
+                </div>
+                <div class="record-row">
+                    <span class="record-label">主机:</span>
+                    <code id="dkimHost">default._domainkey</code>
+                </div>
+                <div class="record-row full-width">
+                    <span class="record-label">值:</span>
+                    <div class="code-container">
+                        <code id="dkimValue"></code>
+                        <button class="copy-btn" onclick="copyToClipboard('dkimValue')">复制</button>
+                    </div>
+                </div>
+            </div>
+            <p class="dns-note">用于邮件签名验证，防止邮件被伪造</p>
+        </div>
+
+        <div class="dns-section">
+            <h3>🛡️ DMARC 记录（域名消息认证报告）</h3>
+            <div class="dns-record">
+                <div class="record-row">
+                    <span class="record-label">类型:</span>
+                    <code>TXT</code>
+                </div>
+                <div class="record-row">
+                    <span class="record-label">主机:</span>
+                    <code>_dmarc</code>
+                </div>
+                <div class="record-row full-width">
+                    <span class="record-label">值:</span>
+                    <div class="code-container">
+                        <code id="dmarcValue"></code>
+                        <button class="copy-btn" onclick="copyToClipboard('dmarcValue')">复制</button>
+                    </div>
+                </div>
+            </div>
+            <p class="dns-note">定义如何处理未通过SPF/DKIM验证的邮件，rua为接收报告的邮箱</p>
+        </div>
+
+        <div class="dns-section">
+            <h3>🔄 PTR 记录（反向DNS解析）</h3>
+            <div class="dns-record">
+                <div class="record-row">
+                    <span class="record-label">类型:</span>
+                    <code>PTR</code>
+                </div>
+                <div class="record-row">
+                    <span class="record-label">IP地址:</span>
+                    <code>您的服务器IP</code>
+                </div>
+                <div class="record-row">
+                    <span class="record-label">值:</span>
+                    <code id="ptrValue"></code>
+                </div>
+            </div>
+            <p class="dns-note">反向解析，需要联系您的服务器提供商（VPS/云服务商）设置，将IP指向您的邮件域名</p>
+        </div>
+
+        <div class="dns-section">
+            <h3>🌐 A 记录（SMTP主机名）</h3>
+            <div class="dns-record">
+                <div class="record-row">
+                    <span class="record-label">类型:</span>
+                    <code>A</code>
+                </div>
+                <div class="record-row">
+                    <span class="record-label">主机:</span>
+                    <code id="aHost"></code>
+                </div>
+                <div class="record-row">
+                    <span class="record-label">值:</span>
+                    <code>您的服务器IP</code>
+                </div>
+            </div>
+            <p class="dns-note">将SMTP主机名指向服务器IP地址</p>
+        </div>
+
+        <div class="dns-section">
+            <h3>📨 SPF 记录（可选）</h3>
+            <div class="dns-record">
+                <div class="record-row">
+                    <span class="record-label">类型:</span>
+                    <code>TXT</code>
+                </div>
+                <div class="record-row">
+                    <span class="record-label">主机:</span>
+                    <code>@</code>
+                </div>
+                <div class="record-row full-width">
+                    <span class="record-label">值:</span>
+                    <div class="code-container">
+                        <code id="spfValue"></code>
+                        <button class="copy-btn" onclick="copyToClipboard('spfValue')">复制</button>
+                    </div>
+                </div>
+            </div>
+            <p class="dns-note">指定哪些服务器可以代表您的域名发送邮件，请将"您的服务器IP"替换为实际IP地址</p>
+        </div>
+
+        <button onclick="goToDashboard()" class="btn-primary">进入控制面板</button>
+    </div>
 </div>
 
 <style>
@@ -63,8 +198,9 @@
     padding: 40px;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 500px;
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 .setup-box h2 {
@@ -144,6 +280,102 @@
 .btn-primary:disabled {
     background: #bdc3c7;
     cursor: not-allowed;
+}
+
+/* DNS配置样式 */
+.dns-section {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    text-align: left;
+}
+
+.dns-section h3 {
+    margin-bottom: 15px;
+    color: #34495e;
+    font-size: 1em;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 10px;
+}
+
+.dns-record {
+    background: white;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 10px;
+}
+
+.record-row {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.record-row.full-width {
+    flex-direction: column;
+}
+
+.record-row:last-child {
+    margin-bottom: 0;
+}
+
+.record-label {
+    color: #7f8c8d;
+    min-width: 70px;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.record-row code {
+    background: #ecf0f1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    word-break: break-all;
+    display: inline-block;
+}
+
+.code-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+}
+
+.code-container code {
+    flex: 1;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.copy-btn {
+    padding: 4px 10px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.copy-btn:hover {
+    background: #2980b9;
+}
+
+.copy-btn.copied {
+    background: #27ae60;
+}
+
+.dns-note {
+    font-size: 12px;
+    color: #95a5a6;
+    margin: 0;
 }
 </style>
 {% endblock %}
@@ -239,10 +471,20 @@ document.getElementById('setupForm').addEventListener('submit', async function(e
         // 保存token
         localStorage.setItem('token', token);
 
-        showMessage('设置成功！正在跳转...', 'success');
-        setTimeout(() => {
-            window.location.href = '/dashboard';
-        }, 1500);
+        // 4. 获取DNS配置并显示
+        const dnsResponse = await fetch('/api/admin/dns-config', {
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+
+        if (dnsResponse.ok) {
+            const dnsConfig = await dnsResponse.json();
+            showDnsConfig(dnsConfig);
+        } else {
+            showMessage('设置成功！正在跳转...', 'success');
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1500);
+        }
 
     } catch (error) {
         showMessage(error.message, 'error');
@@ -250,5 +492,41 @@ document.getElementById('setupForm').addEventListener('submit', async function(e
         submitBtn.textContent = '完成设置';
     }
 });
+
+function showDnsConfig(config) {
+    const { mail_domain, smtp_hostname, dkim_selector, dkim_record } = config;
+    const adminEmail = localStorage.getItem('username') + '@' + mail_domain;
+
+    // 填充DNS配置
+    document.getElementById('mxValue').textContent = smtp_hostname;
+    document.getElementById('dkimHost').textContent = dkim_selector + '._domainkey';
+    document.getElementById('dkimValue').textContent = dkim_record;
+    document.getElementById('dmarcValue').textContent = `v=DMARC1; p=quarantine; rua=mailto:${adminEmail}; sp=quarantine; pct=100; fo=1`;
+    document.getElementById('ptrValue').textContent = smtp_hostname;
+    document.getElementById('aHost').textContent = smtp_hostname.split('.')[0];
+    document.getElementById('spfValue').textContent = `v=spf1 ip4:您的服务器IP -all`;
+
+    // 显示DNS配置框
+    document.getElementById('setupFormBox').style.display = 'none';
+    document.getElementById('dnsConfigBox').style.display = 'block';
+}
+
+function copyToClipboard(elementId) {
+    const text = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '已复制';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+
+function goToDashboard() {
+    window.location.href = '/dashboard';
+}
 </script>
 {% endblock %}

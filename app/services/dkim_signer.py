@@ -246,12 +246,13 @@ class DKIMSigner:
         
         return dns_record
     
-    def sign_email(self, message: EmailMessage) -> EmailMessage:
+    def sign_email(self, message: EmailMessage, domain: str = None) -> EmailMessage:
         """
         为邮件添加DKIM签名（使用dkimpy库）
         
         Args:
             message: 邮件消息对象
+            domain: 签名域名，如果不指定则使用settings.MAIL_DOMAIN
             
         Returns:
             添加了DKIM签名的邮件消息对象
@@ -260,7 +261,8 @@ class DKIMSigner:
             raise RuntimeError("DKIM签名器未初始化，请先调用initialize()")
         
         # 获取域名和选择器
-        domain = settings.MAIL_DOMAIN
+        if domain is None:
+            domain = settings.MAIL_DOMAIN
         selector = self.DKIM_SELECTOR
         
         # 将邮件转换为字节

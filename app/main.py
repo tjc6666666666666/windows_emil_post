@@ -17,19 +17,40 @@ from app.services.dkim_signer import init_dkim_signer
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
+    from sqlalchemy import select
+    from app.models.config import SystemConfig
+
     # 启动时初始化数据库
     await init_db()
-    
+
     # 初始化DKIM签名器（自动检查/生成密钥）
     dkim_signer = init_dkim_signer()
-    
+
+    # 从数据库获取实际配置
+    async for db in get_db():
+        # 获取邮件域名
+        result = await db.execute(
+            select(SystemConfig).where(SystemConfig.config_key == "mail_domain")
+        )
+        mail_domain_config = result.scalar_one_or_none()
+        mail_domain = mail_domain_config.config_value if mail_domain_config else settings.MAIL_DOMAIN
+
+        # 获取SMTP主机名
+        result = await db.execute(
+            select(SystemConfig).where(SystemConfig.config_key == "smtp_helo_hostname")
+        )
+        smtp_hostname_config = result.scalar_one_or_none()
+        smtp_hostname = smtp_hostname_config.config_value if smtp_hostname_config else settings.SMTP_HELO_HOSTNAME
+        break
+
     # 启动SMTP服务器（接收邮件）
     smtp_server.start()
-    
+
     print(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} 启动成功!")
     print(f"📧 SMTP服务器监听: {settings.SMTP_HOST}:{settings.SMTP_PORT}")
-    print(f"🔑 DKIM签名器已就绪 (域名: {settings.MAIL_DOMAIN}, 选择器: {dkim_signer.DKIM_SELECTOR})")
+    print(f"🔑 DKIM签名器已就绪 (域名: {mail_domain}, 选择器: {dkim_signer.DKIM_SELECTOR})")
     print(f"🌐 Web界面: http://0.0.0.0:8000")
+    print(f"📌 SMTP主机名: {smtp_hostname}")
     yield
     # 关闭时清理资源
     smtp_server.stop()
