@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # DNS配置（用于发送邮件时解析MX记录）
     DNS_SERVERS: list = ["8.8.8.8", "114.114.114.114"]
     
+    # SMTP HELO主机名（必须有有效的A记录）
+    SMTP_HELO_HOSTNAME: str = os.getenv("SMTP_HELO_HOSTNAME", "mail.453627.xyz")
+    
     class Config:
         env_file = ".env"
 

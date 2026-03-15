@@ -4,6 +4,8 @@ import ctypes
 import aiodns
 import aiosmtplib
 from email.message import EmailMessage
+from email.utils import formatdate
+from datetime import datetime
 
 
 
@@ -12,6 +14,7 @@ FROM_ADDR = "1@453627.xyz"
 TO_ADDR = "3428979959@qq.com"
 SUBJECT = "Python 异步直接投递测试"
 BODY = "这是通过 Python aiosmtplib 发送的测试邮件。"
+HELO_HOSTNAME = "mail.453627.xyz"  # 必须有有效的A记录
 
 async def send_direct_email():
     target_domain = TO_ADDR.split('@')[1]
@@ -35,11 +38,17 @@ async def send_direct_email():
         message["From"] = FROM_ADDR
         message["To"] = TO_ADDR
         message["Subject"] = SUBJECT
+        message["Date"] = formatdate(localtime=True)
         message.set_content(BODY)
 
         # 4. 异步投递
         print(f"\n正在尝试连接 {best_mx} 并直接投递邮件...")
-        async with aiosmtplib.SMTP(hostname=best_mx, port=25, timeout=10) as smtp:
+        async with aiosmtplib.SMTP(
+            hostname=best_mx, 
+            port=25, 
+            timeout=10,
+            local_hostname=HELO_HOSTNAME  # 设置有效的HELO主机名
+        ) as smtp:
             await smtp.send_message(message)
             
         print("成功：邮件已提交至目标接收队列！")

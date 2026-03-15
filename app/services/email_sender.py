@@ -4,6 +4,7 @@
 import aiodns
 import aiosmtplib
 from email.message import EmailMessage
+from email.utils import formatdate
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -49,6 +50,7 @@ class EmailSenderService:
             message["From"] = from_addr
             message["To"] = to_addr
             message["Subject"] = subject
+            message["Date"] = formatdate(localtime=True)
             message.set_content(body)
             
             # 异步发送（参考原email_sender.py的实现）
@@ -57,7 +59,8 @@ class EmailSenderService:
                 hostname=mx_server, 
                 port=25, 
                 timeout=30,
-                use_tls=False  # 25端口通常不使用TLS
+                use_tls=False,  # 25端口通常不使用TLS
+                local_hostname=settings.SMTP_HELO_HOSTNAME  # 设置有效的HELO主机名
             ) as smtp:
                 # 尝试STARTTLS（如果服务器支持）
                 try:
@@ -89,6 +92,7 @@ class EmailSenderService:
             message["From"] = from_addr
             message["To"] = to_addr
             message["Subject"] = subject
+            message["Date"] = formatdate(localtime=True)
             message.set_content(body)
             
             await aiosmtplib.send(
@@ -97,7 +101,8 @@ class EmailSenderService:
                 port=settings.SMTP_PORT,
                 username=settings.SMTP_USER or None,
                 password=settings.SMTP_PASSWORD or None,
-                timeout=30
+                timeout=30,
+                local_hostname=settings.SMTP_HELO_HOSTNAME  # 设置有效的HELO主机名
             )
             return True
             
