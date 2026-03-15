@@ -20,7 +20,7 @@ if errorlevel 1 (
 )
 
 echo [2/2] Building executable...
-.venv\Scripts\pyinstaller.exe EmailServer.spec --noconfirm
+.venv\Scripts\python.exe -m PyInstaller EmailServer.spec --noconfirm
 if errorlevel 1 (
     echo [ERROR] Build failed
     pause
