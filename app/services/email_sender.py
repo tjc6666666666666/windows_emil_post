@@ -12,6 +12,7 @@ from fastapi import HTTPException, status
 from app.models.user import User, Email, EmailStatus
 from app.schemas.email import EmailSendRequest
 from app.config import settings
+from app.services.dkim_signer import get_dkim_signer
 
 
 class EmailSenderService:
@@ -53,6 +54,13 @@ class EmailSenderService:
             message["Date"] = formatdate(localtime=True)
             message["Message-ID"] = make_msgid(domain=settings.MAIL_DOMAIN)
             message.set_content(body)
+            
+            # 添加DKIM签名
+            try:
+                dkim_signer = get_dkim_signer()
+                message = dkim_signer.sign_email(message)
+            except Exception as e:
+                print(f"[DKIM] 签名失败: {e}")
             
             # 异步发送（参考原email_sender.py的实现）
             print(f"正在连接 {mx_server}:25 并发送邮件...")

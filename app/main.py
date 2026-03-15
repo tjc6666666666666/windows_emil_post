@@ -10,6 +10,7 @@ from app.config import settings
 from app.database import init_db
 from app.api import auth_router, email_router, pages_router
 from app.services.smtp_server import smtp_server
+from app.services.dkim_signer import init_dkim_signer
 
 
 @asynccontextmanager
@@ -18,11 +19,15 @@ async def lifespan(app: FastAPI):
     # 启动时初始化数据库
     await init_db()
     
+    # 初始化DKIM签名器（自动检查/生成密钥）
+    dkim_signer = init_dkim_signer()
+    
     # 启动SMTP服务器（接收邮件）
     smtp_server.start()
     
     print(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} 启动成功!")
     print(f"📧 SMTP服务器监听: {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+    print(f"🔑 DKIM签名器已就绪 (域名: {settings.MAIL_DOMAIN}, 选择器: {dkim_signer.DKIM_SELECTOR})")
     print(f"🌐 Web界面: http://0.0.0.0:8000")
     yield
     # 关闭时清理资源
