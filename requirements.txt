@@ -23,6 +23,10 @@ aiodns>=3.0.0
 aiosmtplib>=3.0.0
 aiosmtpd>=1.4.0
 
+# DKIM签名
+dkimpy>=1.0.0
+rsa>=4.9
+
 # 异步HTTP客户端（可选）
 httpx>=0.26.0
 
