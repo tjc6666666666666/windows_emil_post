@@ -13,10 +13,7 @@ ENV/
 .uv/
 uv.lock
 
-# PyInstaller
-*.spec
-*.manifest
-*.exe
+
 
 # Database
 *.db

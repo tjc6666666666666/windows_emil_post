@@ -99,10 +99,12 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 
 
 if __name__ == "__main__":
+    import sys
     import uvicorn
+    # PyInstaller 打包后禁用 reload
+    is_frozen = getattr(sys, 'frozen', False)
     uvicorn.run(
-        "app.main:app",
+        app,
         host="0.0.0.0",
         port=8000,
-        reload=settings.DEBUG
     )
