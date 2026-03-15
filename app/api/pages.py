@@ -1,13 +1,24 @@
 """
 页面路由（前端HTML）
 """
+import sys
+from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 
+def get_resource_path(relative_path: str) -> Path:
+    """获取资源文件路径，支持 PyInstaller 打包"""
+    if getattr(sys, 'frozen', False):
+        base_path = Path(sys._MEIPASS)
+    else:
+        base_path = Path(__file__).parent.parent.parent
+    return base_path / relative_path
+
+
 router = APIRouter(tags=["页面"])
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory=str(get_resource_path("app/templates")))
 
 
 @router.get("/", response_class=HTMLResponse)
