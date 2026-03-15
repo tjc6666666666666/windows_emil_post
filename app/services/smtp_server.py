@@ -6,6 +6,7 @@ import logging
 import socket
 from email import message_from_bytes
 from email.utils import parseaddr
+from email.header import decode_header
 from aiosmtpd.controller import Controller
 from aiosmtpd.handlers import Message
 from sqlalchemy import select
@@ -15,6 +16,24 @@ from datetime import datetime
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def decode_email_header(header_value: str, default: str = '(无主题)') -> str:
+    """解码 RFC 2047 编码的邮件头（支持多段编码）"""
+    if not header_value:
+        return default
+    
+    try:
+        decoded_parts = []
+        for part, encoding in decode_header(header_value):
+            if isinstance(part, bytes):
+                decoded_parts.append(part.decode(encoding or 'utf-8', errors='ignore'))
+            else:
+                decoded_parts.append(part)
+        return ''.join(decoded_parts)
+    except Exception as e:
+        logger.warning(f"解码邮件头失败: {e}, 原始值: {header_value}")
+        return header_value
 
 
 class EmailHandler:
@@ -36,7 +55,7 @@ class EmailHandler:
             
             # 解析邮件头
             message = message_from_bytes(envelope.content)
-            subject = message.get('Subject', '(无主题)')
+            subject = decode_email_header(message.get('Subject'), '(无主题)')
             
             # 获取邮件正文
             body = ""
