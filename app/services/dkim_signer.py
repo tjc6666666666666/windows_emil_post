@@ -1,6 +1,6 @@
 """
 DKIM签名模块
-自动检查和生成DKIM密钥对，为邮件添加DKIM签名
+使用dkimpy库为邮件添加DKIM签名
 """
 import os
 import asyncio
@@ -13,6 +13,8 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.backends import default_backend
 import base64
+
+import dkim
 
 from app.config import settings
 
@@ -38,6 +40,7 @@ class DKIMSigner:
         self.base_dir = Path(base_dir) if base_dir else Path.cwd()
         self._private_key = None
         self._public_key = None
+        self._private_key_bytes = None
         
     @property
     def private_key_path(self) -> Path:
@@ -109,6 +112,7 @@ class DKIMSigner:
         
         # 加载私钥
         private_pem = self.private_key_path.read_bytes()
+        self._private_key_bytes = private_pem  # 保存原始字节用于dkimpy
         private_key = serialization.load_pem_private_key(
             private_pem,
             password=None,
@@ -150,6 +154,7 @@ class DKIMSigner:
             # 只有私钥，从私钥提取公钥
             print(f"[DKIM] 公钥文件不存在，从私钥提取公钥...")
             private_pem = self.private_key_path.read_bytes()
+            self._private_key_bytes = private_pem
             self._private_key = serialization.load_pem_private_key(
                 private_pem,
                 password=None,
@@ -168,11 +173,18 @@ class DKIMSigner:
             self._private_key, self._public_key = self._generate_key_pair()
             self._save_keys(self._private_key, self._public_key)
         
+        # 确保私钥字节已保存
+        if self._private_key_bytes is None:
+            self._private_key_bytes = self.private_key_path.read_bytes()
+        
         print(f"[DKIM] 初始化完成")
     
     def get_public_key_dns_record(self) -> str:
         """
         获取DNS TXT记录内容（用于配置DKIM）
+        
+        注意：DKIM DNS记录需要使用PKCS#1格式的公钥（仅模数和指数），
+        而不是SubjectPublicKeyInfo格式。
         
         Returns:
             DNS TXT记录值
@@ -180,14 +192,53 @@ class DKIMSigner:
         if not self._public_key:
             raise RuntimeError("DKIM签名器未初始化")
         
-        # 获取公钥的DER编码
-        public_der = self._public_key.public_bytes(
-            encoding=serialization.Encoding.DER,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
+        # 获取公钥数值
+        public_numbers = self._public_key.public_numbers()
+        n = public_numbers.n  # 模数
+        e = public_numbers.e  # 公开指数
+        
+        # 编码为DER格式的RSAPublicKey (PKCS#1)
+        # RSAPublicKey ::= SEQUENCE { modulus INTEGER, publicExponent INTEGER }
+        from cryptography.hazmat.primitives.serialization import Encoding
+        from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicNumbers
+        
+        # 使用cryptography库直接获取PKCS#1格式的DER编码
+        # 我们需要手动构建DER序列
+        def int_to_bytes(n: int) -> bytes:
+            """将整数转换为字节（大端序）"""
+            if n == 0:
+                return b'\x00'
+            byte_len = (n.bit_length() + 7) // 8
+            result = n.to_bytes(byte_len, 'big')
+            # 如果最高位是1，需要添加前导零（DER整数编码要求）
+            if result[0] & 0x80:
+                result = b'\x00' + result
+            return result
+        
+        def encode_der_integer(n: int) -> bytes:
+            """编码DER整数"""
+            value = int_to_bytes(n)
+            return encode_der_tlv(0x02, value)
+        
+        def encode_der_tlv(tag: int, value: bytes) -> bytes:
+            """编码DER TLV"""
+            length = len(value)
+            if length < 128:
+                length_bytes = bytes([length])
+            elif length < 256:
+                length_bytes = bytes([0x81, length])
+            else:
+                length_bytes = bytes([0x82, (length >> 8) & 0xff, length & 0xff])
+            return bytes([tag]) + length_bytes + value
+        
+        # 构建RSAPublicKey SEQUENCE
+        modulus_der = encode_der_integer(n)
+        exponent_der = encode_der_integer(e)
+        sequence_content = modulus_der + exponent_der
+        rsa_public_key_der = encode_der_tlv(0x30, sequence_content)
         
         # Base64编码
-        pubkey_b64 = base64.b64encode(public_der).decode('ascii')
+        pubkey_b64 = base64.b64encode(rsa_public_key_der).decode('ascii')
         
         # 构建DNS TXT记录
         # 格式: v=DKIM1; k=rsa; p=<public_key_base64>
@@ -195,45 +246,9 @@ class DKIMSigner:
         
         return dns_record
     
-    def _canonicalize_headers(self, headers: list, message: EmailMessage) -> str:
-        """
-        规范化邮件头
-        
-        Args:
-            headers: 需要签名的头字段列表
-            message: 邮件消息对象
-            
-        Returns:
-            规范化后的头字符串
-        """
-        canonicalized = []
-        for header in headers:
-            value = message.get(header, "")
-            if value:
-                # 简单规范化：移除多余空白，保留原始值
-                canonicalized.append(f"{header}: {value}")
-        return "\r\n".join(canonicalized) + "\r\n"
-    
-    def _canonicalize_body(self, body: str) -> str:
-        """
-        规范化邮件正文
-        
-        Args:
-            body: 邮件正文
-            
-        Returns:
-            规范化后的正文
-        """
-        # 简单规范化：确保行尾为CRLF，移除尾部空行
-        body = body.replace("\r\n", "\n").replace("\n", "\r\n")
-        # 移除尾部空白行
-        while body.endswith("\r\n\r\n"):
-            body = body[:-2]
-        return body
-    
     def sign_email(self, message: EmailMessage) -> EmailMessage:
         """
-        为邮件添加DKIM签名
+        为邮件添加DKIM签名（使用dkimpy库）
         
         Args:
             message: 邮件消息对象
@@ -241,65 +256,45 @@ class DKIMSigner:
         Returns:
             添加了DKIM签名的邮件消息对象
         """
-        if not self._private_key:
+        if not self._private_key_bytes:
             raise RuntimeError("DKIM签名器未初始化，请先调用initialize()")
         
-        # 获取签名时间戳
-        now = datetime.utcnow()
-        timestamp = int(now.timestamp())
-        
-        # 需要签名的头字段
-        signed_headers = ["From", "To", "Subject", "Date", "Message-ID"]
-        
-        # 构建规范化的头字符串
-        canonicalized_headers = ""
-        for header in signed_headers:
-            value = message.get(header, "")
-            if value:
-                canonicalized_headers += f"{header}: {value}\r\n"
-        
-        # 获取邮件正文
-        body = message.get_content()
-        if isinstance(body, str):
-            canonicalized_body = self._canonicalize_body(body)
-        else:
-            canonicalized_body = ""
-        
-        # 计算正文哈希
-        import hashlib
-        body_hash = hashlib.sha256(canonicalized_body.encode('utf-8')).digest()
-        body_hash_b64 = base64.b64encode(body_hash).decode('ascii')
-        
-        # 构建DKIM签名头内容
+        # 获取域名和选择器
         domain = settings.MAIL_DOMAIN
         selector = self.DKIM_SELECTOR
         
-        # 构建签名字符串
-        # DKIM-Signature头格式
-        dkim_header_base = (
-            f"v=1; a=rsa-sha256; c=relaxed/simple; d={domain}; s={selector}; "
-            f"t={timestamp}; bh={body_hash_b64}; "
-            f"h={':'.join(signed_headers)}; b="
+        # 将邮件转换为字节
+        # 使用 as_bytes() 获取原始邮件内容
+        message_bytes = message.as_bytes()
+        
+        # 使用dkimpy进行签名
+        # include_headers 指定要签名的头字段
+        include_headers = [b'from', b'to', b'subject', b'date', b'message-id']
+        
+        sig = dkim.sign(
+            message=message_bytes,
+            selector=selector.encode('ascii'),
+            domain=domain.encode('ascii'),
+            privkey=self._private_key_bytes,
+            include_headers=include_headers
         )
         
-        # 构建待签名数据
-        sign_data = canonicalized_headers + f"dkim-signature:{dkim_header_base}"
+        # dkim.sign 返回的是完整的 DKIM-Signature 头行（包含 CRLF）
+        # 格式: b'DKIM-Signature: v=1; ...\r\n'
+        sig_line = sig.decode('ascii').strip()
         
-        # 使用私钥签名
-        signature = self._private_key.sign(
-            sign_data.encode('utf-8'),
-            padding.PKCS1v15(),
-            hashes.SHA256()
-        )
+        # 提取头名和值
+        if sig_line.startswith('DKIM-Signature:'):
+            sig_value = sig_line[len('DKIM-Signature:'):].strip()
+        else:
+            sig_value = sig_line
         
-        # Base64编码签名
-        signature_b64 = base64.b64encode(signature).decode('ascii')
+        # 删除已存在的DKIM-Signature头（如果有）
+        if 'DKIM-Signature' in message:
+            del message['DKIM-Signature']
         
-        # 完整的DKIM签名头
-        dkim_signature = dkim_header_base + signature_b64
-        
-        # 添加DKIM签名头
-        message["DKIM-Signature"] = dkim_signature
+        # 直接添加到_headers列表，避免MIME编码
+        message._headers.append(('DKIM-Signature', sig_value))
         
         print(f"[DKIM] 已为邮件添加DKIM签名 (域名: {domain}, 选择器: {selector})")
         
