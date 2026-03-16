@@ -3,7 +3,7 @@
 """
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, List
 from app.models.user import EmailStatus
 
 
@@ -24,6 +24,17 @@ class EmailSendRequest(EmailCreate):
     pass
 
 
+class AttachmentResponse(BaseModel):
+    """附件响应模型"""
+    id: int
+    filename: str
+    content_type: Optional[str] = None
+    file_size: int
+    
+    class Config:
+        from_attributes = True
+
+
 class EmailResponse(EmailBase):
     """邮件响应模型"""
     id: int
@@ -34,6 +45,12 @@ class EmailResponse(EmailBase):
     
     class Config:
         from_attributes = True
+
+
+class EmailDetailResponse(EmailResponse):
+    """邮件详情响应模型"""
+    html_body: Optional[str] = None
+    attachments: List[AttachmentResponse] = []
 
 
 class EmailListResponse(BaseModel):

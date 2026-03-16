@@ -6,6 +6,7 @@ from sqlalchemy import String, Boolean, DateTime, Text, Integer, ForeignKey, Enu
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 import enum
+import os
 
 
 class EmailStatus(str, enum.Enum):
@@ -75,5 +76,32 @@ class Email(Base):
     sender: Mapped["User"] = relationship("User", back_populates="sent_emails", foreign_keys=[sender_id])
     recipient: Mapped["User"] = relationship("User", back_populates="received_emails", foreign_keys=[recipient_id])
     
+    # 附件关联
+    attachments: Mapped[list["Attachment"]] = relationship("Attachment", back_populates="email", cascade="all, delete-orphan")
+    
     def __repr__(self):
         return f"<Email(id={self.id}, from={self.from_addr}, to={self.to_addr}, subject={self.subject})>"
+
+
+class Attachment(Base):
+    """邮件附件模型"""
+    __tablename__ = "attachments"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email_id: Mapped[int] = mapped_column(Integer, ForeignKey("emails.id"), nullable=False, index=True)
+    
+    # 附件信息
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)  # 原始文件名
+    stored_filename: Mapped[str] = mapped_column(String(255), nullable=False)  # 存储的文件名（UUID）
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)  # 存储路径
+    content_type: Mapped[str] = mapped_column(String(100), nullable=True)  # MIME类型
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)  # 文件大小（字节）
+    
+    # 时间戳
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    
+    # 关联关系
+    email: Mapped["Email"] = relationship("Email", back_populates="attachments")
+    
+    def __repr__(self):
+        return f"<Attachment(id={self.id}, filename={self.filename}, size={self.file_size})>"

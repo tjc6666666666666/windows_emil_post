@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     # SMTP HELO主机名（必须有有效的A记录）
     SMTP_HELO_HOSTNAME: str = os.getenv("SMTP_HELO_HOSTNAME", "mail.453627.xyz")
     
+    # 附件存储配置
+    ATTACHMENT_STORAGE_PATH: str = os.getenv("ATTACHMENT_STORAGE_PATH", "./attachments")
+    
     class Config:
         env_file = ".env"
 

@@ -4,6 +4,8 @@ SMTP服务器 - 接收外部邮件
 import asyncio
 import logging
 import socket
+import uuid
+import os
 from email import message_from_bytes
 from email.utils import parseaddr
 from email.header import decode_header
@@ -11,11 +13,16 @@ from aiosmtpd.controller import Controller
 from aiosmtpd.handlers import Message
 from sqlalchemy import select
 from app.database import async_session_maker
-from app.models.user import User, Email, EmailStatus
+from app.models.user import User, Email, EmailStatus, Attachment
 from datetime import datetime
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def ensure_attachment_dir():
+    """确保附件存储目录存在"""
+    os.makedirs(settings.ATTACHMENT_STORAGE_PATH, exist_ok=True)
 
 
 def decode_email_header(header_value: str, default: str = '(无主题)') -> str:
@@ -42,6 +49,9 @@ class EmailHandler:
     async def handle_DATA(self, server, session, envelope):
         """处理接收到的邮件"""
         try:
+            # 确保附件目录存在
+            ensure_attachment_dir()
+            
             # 获取邮件内容
             content = envelope.content
             if isinstance(content, bytes):
@@ -57,19 +67,40 @@ class EmailHandler:
             message = message_from_bytes(envelope.content)
             subject = decode_email_header(message.get('Subject'), '(无主题)')
             
-            # 获取邮件正文（同时提取纯文本和HTML格式）
+            # 获取邮件正文和附件
             body = ""
             html_body = ""
+            attachments_data = []
+            
             if message.is_multipart():
                 for part in message.walk():
                     content_type = part.get_content_type()
-                    payload = part.get_payload(decode=True)
-                    if payload:
-                        decoded = payload.decode('utf-8', errors='ignore')
-                        if content_type == "text/plain" and not body:
-                            body = decoded
-                        elif content_type == "text/html" and not html_body:
-                            html_body = decoded
+                    content_disposition = part.get("Content-Disposition", "")
+                    
+                    # 检测是否为附件
+                    if "attachment" in content_disposition or part.get_filename():
+                        # 提取附件
+                        filename = part.get_filename()
+                        if filename:
+                            # 解码文件名（处理编码的文件名）
+                            filename = decode_email_header(filename, filename)
+                            payload = part.get_payload(decode=True)
+                            if payload:
+                                attachments_data.append({
+                                    'filename': filename,
+                                    'content': payload,
+                                    'content_type': content_type
+                                })
+                                logger.info(f"发现附件: {filename}, 大小: {len(payload)} 字节")
+                    else:
+                        # 提取正文内容
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            decoded = payload.decode('utf-8', errors='ignore')
+                            if content_type == "text/plain" and not body:
+                                body = decoded
+                            elif content_type == "text/html" and not html_body:
+                                html_body = decoded
             else:
                 payload = message.get_payload(decode=True)
                 if payload:
@@ -104,7 +135,32 @@ class EmailHandler:
                             created_at=datetime.utcnow()
                         )
                         db.add(email)
-                        logger.info(f"邮件已保存: {subject} -> {rcpt_to}")
+                        await db.flush()  # 获取email.id
+                        
+                        # 保存附件
+                        for att_data in attachments_data:
+                            # 生成唯一文件名
+                            ext = os.path.splitext(att_data['filename'])[1]
+                            stored_filename = f"{uuid.uuid4()}{ext}"
+                            file_path = os.path.join(settings.ATTACHMENT_STORAGE_PATH, stored_filename)
+                            
+                            # 保存文件到磁盘
+                            with open(file_path, 'wb') as f:
+                                f.write(att_data['content'])
+                            
+                            # 创建附件记录
+                            attachment = Attachment(
+                                email_id=email.id,
+                                filename=att_data['filename'],
+                                stored_filename=stored_filename,
+                                file_path=file_path,
+                                content_type=att_data['content_type'],
+                                file_size=len(att_data['content'])
+                            )
+                            db.add(attachment)
+                            logger.info(f"附件已保存: {att_data['filename']} -> {stored_filename}")
+                        
+                        logger.info(f"邮件已保存: {subject} -> {rcpt_to}, 附件数: {len(attachments_data)}")
                     else:
                         logger.warning(f"收件人不存在: {rcpt_to}")
                 
