@@ -4,8 +4,6 @@ SMTP服务器 - 接收外部邮件
 import asyncio
 import logging
 import socket
-import uuid
-import os
 from email import message_from_bytes
 from email.utils import parseaddr
 from email.header import decode_header
@@ -16,13 +14,9 @@ from app.database import async_session_maker
 from app.models.user import User, Email, EmailStatus, Attachment
 from datetime import datetime
 from app.config import settings
+from app.services.attachment_storage import attachment_storage
 
 logger = logging.getLogger(__name__)
-
-
-def ensure_attachment_dir():
-    """确保附件存储目录存在"""
-    os.makedirs(settings.ATTACHMENT_STORAGE_PATH, exist_ok=True)
 
 
 def decode_email_header(header_value: str, default: str = '(无主题)') -> str:
@@ -43,15 +37,33 @@ def decode_email_header(header_value: str, default: str = '(无主题)') -> str:
         return header_value
 
 
+def decode_payload(payload: bytes, charset: str = None) -> str:
+    """解码邮件正文，支持多种编码"""
+    if not payload:
+        return ""
+    
+    # 尝试多种编码
+    encodings = []
+    if charset:
+        encodings.append(charset)
+    encodings.extend(['utf-8', 'gbk', 'gb2312', 'gb18030', 'big5', 'iso-8859-1'])
+    
+    for encoding in encodings:
+        try:
+            return payload.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    
+    # 最后使用 ignore 模式
+    return payload.decode('utf-8', errors='ignore')
+
+
 class EmailHandler:
     """邮件处理器"""
     
     async def handle_DATA(self, server, session, envelope):
         """处理接收到的邮件"""
         try:
-            # 确保附件目录存在
-            ensure_attachment_dir()
-            
             # 获取邮件内容
             content = envelope.content
             if isinstance(content, bytes):
@@ -109,7 +121,9 @@ class EmailHandler:
                         if content_type in ("text/plain", "text/html") and not filename:
                             payload = part.get_payload(decode=True)
                             if payload:
-                                decoded = payload.decode('utf-8', errors='ignore')
+                                # 获取字符集
+                                charset = part.get_content_charset()
+                                decoded = decode_payload(payload, charset)
                                 if content_type == "text/plain" and not body:
                                     body = decoded
                                 elif content_type == "text/html" and not html_body:
@@ -117,7 +131,8 @@ class EmailHandler:
             else:
                 payload = message.get_payload(decode=True)
                 if payload:
-                    body = payload.decode('utf-8', errors='ignore')
+                    charset = message.get_content_charset()
+                    body = decode_payload(payload, charset)
             
             # 存储到数据库
             async with async_session_maker() as db:
@@ -152,14 +167,11 @@ class EmailHandler:
                         
                         # 保存附件
                         for att_data in attachments_data:
-                            # 生成唯一文件名
-                            ext = os.path.splitext(att_data['filename'])[1]
-                            stored_filename = f"{uuid.uuid4()}{ext}"
-                            file_path = os.path.join(settings.ATTACHMENT_STORAGE_PATH, stored_filename)
-                            
-                            # 保存文件到磁盘
-                            with open(file_path, 'wb') as f:
-                                f.write(att_data['content'])
+                            # 使用附件存储服务保存文件
+                            stored_filename, file_path, relative_path = attachment_storage.save(
+                                att_data['content'],
+                                att_data['filename']
+                            )
                             
                             # 创建附件记录
                             attachment = Attachment(
