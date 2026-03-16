@@ -18,7 +18,14 @@ from app.models.config import SystemConfig
 from app.schemas.email import EmailSendRequest
 from app.config import settings
 from app.services.dkim_signer import get_dkim_signer
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
+import re
+
+
+def parse_email_addresses(to_addr: str) -> List[str]:
+    """解析收件人地址（支持逗号分隔的多个地址）"""
+    addresses = [addr.strip() for addr in to_addr.split(',') if addr.strip()]
+    return addresses
 
 
 class EmailSenderService:
@@ -207,12 +214,14 @@ class EmailSenderService:
         subject: Optional[str] = None,
         body: Optional[str] = None,
         attachments: Optional[List[Dict[str, Any]]] = None
-    ) -> Email:
-        """发送邮件
+    ) -> Tuple[Email, List[Email]]:
+        """发送邮件（支持群发）
         
         支持两种调用方式：
         1. 通过 EmailSendRequest 对象：send_email(db, user, email_data)
         2. 通过参数：send_email(db, user, to_addr=..., subject=..., body=..., attachments=...)
+        
+        返回：(主邮件记录, [所有邮件记录列表])
         """
         # 兼容两种调用方式
         if email_data:
@@ -226,56 +235,73 @@ class EmailSenderService:
             final_body = body or ""
             final_attachments = attachments
         
+        # 解析多个收件人地址
+        recipient_addresses = parse_email_addresses(final_to_addr)
+        
         # 获取配置
         mail_domain = await self.get_mail_domain(db)
         smtp_hostname = await self.get_smtp_hostname(db)
-
-        # 创建邮件记录
-        email = Email(
-            sender_id=user.id,
-            from_addr=user.get_email(mail_domain),
-            to_addr=final_to_addr,
-            subject=final_subject,
-            body=final_body,
-            status=EmailStatus.DRAFT
-        )
-        db.add(email)
-        await db.commit()  # 先提交，避免长时间锁定
-        await db.refresh(email)
-
-        # 发送邮件（不持有数据库锁）
-        try:
-            success = await self.send_email_direct(
-                from_addr=user.get_email(mail_domain),
-                to_addr=final_to_addr,
+        
+        from_addr = user.get_email(mail_domain)
+        
+        # 创建所有邮件记录
+        email_records = []
+        for recipient_addr in recipient_addresses:
+            email = Email(
+                sender_id=user.id,
+                from_addr=from_addr,
+                to_addr=recipient_addr,
                 subject=final_subject,
                 body=final_body,
-                mail_domain=mail_domain,
-                smtp_hostname=smtp_hostname,
-                attachments=final_attachments
+                status=EmailStatus.DRAFT
             )
-        except Exception as e:
-            print(f"邮件发送异常: {e}")
-            success = False
-
-        # 更新状态（新的数据库会话）
-        if success:
-            email.status = EmailStatus.SENT
-            email.sent_at = datetime.utcnow()
-        else:
-            email.status = EmailStatus.FAILED
-
-        db.add(email)
+            db.add(email)
+            email_records.append(email)
+        
         await db.commit()
-        await db.refresh(email)
-
-        if not success:
+        for email in email_records:
+            await db.refresh(email)
+        
+        # 逐个发送邮件
+        failed_recipients = []
+        for i, (email, recipient_addr) in enumerate(zip(email_records, recipient_addresses)):
+            try:
+                success = await self.send_email_direct(
+                    from_addr=from_addr,
+                    to_addr=recipient_addr,
+                    subject=final_subject,
+                    body=final_body,
+                    mail_domain=mail_domain,
+                    smtp_hostname=smtp_hostname,
+                    attachments=final_attachments
+                )
+            except Exception as e:
+                print(f"邮件发送异常 [{recipient_addr}]: {e}")
+                success = False
+            
+            # 更新状态
+            if success:
+                email.status = EmailStatus.SENT
+                email.sent_at = datetime.utcnow()
+            else:
+                email.status = EmailStatus.FAILED
+                failed_recipients.append(recipient_addr)
+            
+            db.add(email)
+        
+        await db.commit()
+        for email in email_records:
+            await db.refresh(email)
+        
+        # 如果有发送失败的收件人，返回警告信息
+        if failed_recipients:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="邮件发送失败，请检查收件人地址是否正确"
+                status_code=status.HTTP_207_MULTI_STATUS,
+                detail=f"部分邮件发送失败: {', '.join(failed_recipients)}"
             )
-
-        return email
+        
+        # 返回第一个邮件记录作为主记录，以及所有记录列表
+        return email_records[0], email_records
 
 
 # 全局实例

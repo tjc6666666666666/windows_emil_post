@@ -24,8 +24,8 @@ async def send_email(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """发送邮件（JSON格式，无附件）"""
-    email = await email_sender_service.send_email(db, current_user, email_data)
+    """发送邮件（JSON格式，无附件，支持群发）"""
+    email, _ = await email_sender_service.send_email(db, current_user, email_data)
     return email
 
 
@@ -38,7 +38,7 @@ async def send_email_with_attachments(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """发送邮件（支持附件）"""
+    """发送邮件（支持附件和群发）"""
     # 读取附件内容
     attachment_data = []
     for file in attachments:
@@ -50,7 +50,7 @@ async def send_email_with_attachments(
                 'content_type': file.content_type or 'application/octet-stream'
             })
     
-    email = await email_sender_service.send_email(
+    email, _ = await email_sender_service.send_email(
         db, current_user, 
         to_addr=to_addr,
         subject=subject, 
