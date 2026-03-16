@@ -76,31 +76,44 @@ class EmailHandler:
                 for part in message.walk():
                     content_type = part.get_content_type()
                     content_disposition = part.get("Content-Disposition", "")
+                    filename = part.get_filename()
                     
-                    # 检测是否为附件
-                    if "attachment" in content_disposition or part.get_filename():
-                        # 提取附件
-                        filename = part.get_filename()
-                        if filename:
-                            # 解码文件名（处理编码的文件名）
-                            filename = decode_email_header(filename, filename)
-                            payload = part.get_payload(decode=True)
-                            if payload:
-                                attachments_data.append({
-                                    'filename': filename,
-                                    'content': payload,
-                                    'content_type': content_type
-                                })
-                                logger.info(f"发现附件: {filename}, 大小: {len(payload)} 字节")
-                    else:
-                        # 提取正文内容
+                    # 解码文件名（处理编码的文件名）
+                    if filename:
+                        filename = decode_email_header(filename, filename)
+                    
+                    # 检测是否为附件（更完善的检测逻辑）
+                    is_attachment = False
+                    
+                    # 1. Content-Disposition 明确标记为 attachment
+                    if "attachment" in content_disposition.lower():
+                        is_attachment = True
+                    # 2. 有文件名且不是正文类型（排除 text/plain 和 text/html 作为内联内容）
+                    elif filename and content_type not in ("text/plain", "text/html"):
+                        is_attachment = True
+                    # 3. 有文件名且 Content-Disposition 为 inline，但不是正文
+                    elif filename and "inline" in content_disposition.lower() and content_type not in ("text/plain", "text/html"):
+                        is_attachment = True
+                    
+                    if is_attachment and filename:
                         payload = part.get_payload(decode=True)
                         if payload:
-                            decoded = payload.decode('utf-8', errors='ignore')
-                            if content_type == "text/plain" and not body:
-                                body = decoded
-                            elif content_type == "text/html" and not html_body:
-                                html_body = decoded
+                            attachments_data.append({
+                                'filename': filename,
+                                'content': payload,
+                                'content_type': content_type
+                            })
+                            logger.info(f"发现附件: {filename}, 类型: {content_type}, 大小: {len(payload)} 字节")
+                    else:
+                        # 提取正文内容（只处理 text/plain 和 text/html）
+                        if content_type in ("text/plain", "text/html") and not filename:
+                            payload = part.get_payload(decode=True)
+                            if payload:
+                                decoded = payload.decode('utf-8', errors='ignore')
+                                if content_type == "text/plain" and not body:
+                                    body = decoded
+                                elif content_type == "text/html" and not html_body:
+                                    html_body = decoded
             else:
                 payload = message.get_payload(decode=True)
                 if payload:

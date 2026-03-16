@@ -29,6 +29,11 @@
             </div>
             <hr>
             <div id="modalBody" class="email-body"></div>
+            <div id="modalAttachments" class="email-attachments" style="margin-top: 20px; display: none;">
+                <hr>
+                <h4>附件</h4>
+                <div id="attachmentList"></div>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
@@ -122,6 +127,22 @@ async function viewEmail(emailId) {
                 modalBody.appendChild(pre);
             }
             
+            // 显示附件
+            const attachmentsDiv = document.getElementById('modalAttachments');
+            const attachmentList = document.getElementById('attachmentList');
+            if (email.attachments && email.attachments.length > 0) {
+                attachmentsDiv.style.display = 'block';
+                attachmentList.innerHTML = email.attachments.map(att => {
+                    const size = formatFileSize(att.file_size);
+                    return `<div class="attachment-item" style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>📎 ${att.filename} (${size})</span>
+                        <button class="btn btn-sm btn-primary" onclick="downloadAttachment(${att.id}, '${att.filename}')">下载</button>
+                    </div>`;
+                }).join('');
+            } else {
+                attachmentsDiv.style.display = 'none';
+            }
+            
             document.getElementById('emailModal').style.display = 'block';
         }
     } catch (error) {
@@ -146,6 +167,32 @@ function replyEmail() {
     localStorage.setItem('replySubject', 'Re: ' + subject);
     
     window.location.href = '/compose';
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function downloadAttachment(attachmentId, filename) {
+    const token = localStorage.getItem('token');
+    // 使用 fetch 下载并触发浏览器保存
+    fetch(`/api/email/attachment/${attachmentId}`, {
+        headers: {'Authorization': `Bearer ${token}`}
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    })
+    .catch(err => alert('下载失败: ' + err.message));
 }
 </script>
 {% endblock %}
