@@ -31,6 +31,13 @@
                           placeholder="请输入邮件内容"></textarea>
             </div>
             
+            <div class="form-group">
+                <label for="attachments">附件</label>
+                <input type="file" id="attachments" name="attachments" multiple 
+                       onchange="handleFileSelect(event)">
+                <div id="attachmentList" class="attachment-list"></div>
+            </div>
+            
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="saveDraft()">保存草稿</button>
                 <button type="submit" class="btn btn-primary">发送</button>
@@ -38,10 +45,52 @@
         </form>
     </div>
 </div>
+
+<style>
+.attachment-list {
+    margin-top: 10px;
+}
+.attachment-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    margin: 4px 0;
+    background: #f5f5f5;
+    border-radius: 4px;
+    font-size: 14px;
+}
+.attachment-item .file-name {
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+.attachment-item .file-size {
+    color: #888;
+    margin-left: 10px;
+    font-size: 12px;
+}
+.attachment-item .remove-btn {
+    background: none;
+    border: none;
+    color: #ff4d4f;
+    cursor: pointer;
+    font-size: 18px;
+    margin-left: 10px;
+    padding: 0 5px;
+}
+.attachment-item .remove-btn:hover {
+    color: #ff7875;
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
+let selectedFiles = [];
+
 document.addEventListener('DOMContentLoaded', function() {
     checkAuth();
     loadUserInfo();
@@ -71,45 +120,120 @@ async function loadUserInfo() {
     }
 }
 
+function handleFileSelect(event) {
+    const files = Array.from(event.target.files);
+    selectedFiles = selectedFiles.concat(files);
+    updateAttachmentList();
+    // 清空 input，允许重复选择同一文件
+    event.target.value = '';
+}
+
+function updateAttachmentList() {
+    const listEl = document.getElementById('attachmentList');
+    listEl.innerHTML = '';
+    
+    selectedFiles.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'attachment-item';
+        item.innerHTML = `
+            <span class="file-name" title="${file.name}">${file.name}</span>
+            <span class="file-size">${formatFileSize(file.size)}</span>
+            <button type="button" class="remove-btn" onclick="removeFile(${index})">×</button>
+        `;
+        listEl.appendChild(item);
+    });
+}
+
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    updateAttachmentList();
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
 async function handleSendEmail(event) {
     event.preventDefault();
     
     const form = event.target;
-    const data = {
-        to_addr: form.to.value,
-        subject: form.subject.value,
-        body: form.body.value
-    };
-    
     const token = localStorage.getItem('token');
     if (!token) {
         showMessage('请先登录', 'error');
         return;
     }
     
-    try {
-        const response = await fetch('/api/email/send', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(data)
+    // 判断是否有附件
+    if (selectedFiles.length > 0) {
+        // 有附件，使用 multipart/form-data
+        const formData = new FormData();
+        formData.append('to_addr', form.to.value);
+        formData.append('subject', form.subject.value);
+        formData.append('body', form.body.value || '');
+        
+        selectedFiles.forEach((file, index) => {
+            formData.append('attachments', file);
         });
         
-        const result = await response.json();
-        
-        if (response.ok) {
-            showMessage('邮件发送成功！', 'success');
-            form.reset();
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 1500);
-        } else {
-            showMessage(result.detail || '发送失败', 'error');
+        try {
+            const response = await fetch('/api/email/send-with-attachments', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showMessage('邮件发送成功！', 'success');
+                form.reset();
+                selectedFiles = [];
+                updateAttachmentList();
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 1500);
+            } else {
+                showMessage(result.detail || '发送失败', 'error');
+            }
+        } catch (error) {
+            showMessage('网络错误，请重试', 'error');
         }
-    } catch (error) {
-        showMessage('网络错误，请重试', 'error');
+    } else {
+        // 无附件，使用 JSON
+        const data = {
+            to_addr: form.to.value,
+            subject: form.subject.value,
+            body: form.body.value
+        };
+        
+        try {
+            const response = await fetch('/api/email/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showMessage('邮件发送成功！', 'success');
+                form.reset();
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 1500);
+            } else {
+                showMessage(result.detail || '发送失败', 'error');
+            }
+        } catch (error) {
+            showMessage('网络错误，请重试', 'error');
+        }
     }
 }
 

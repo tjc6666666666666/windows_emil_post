@@ -1,7 +1,7 @@
 """
 邮件相关API路由
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from app.database import get_db
@@ -9,6 +9,7 @@ from app.schemas.email import EmailSendRequest, EmailResponse, EmailListResponse
 from app.services.email_sender import email_sender_service
 from app.api.auth import get_current_user
 from app.models.user import User, Email, EmailStatus
+from typing import Optional, List
 
 
 router = APIRouter(prefix="/api/email", tags=["邮件"])
@@ -20,8 +21,39 @@ async def send_email(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """发送邮件"""
+    """发送邮件（JSON格式，无附件）"""
     email = await email_sender_service.send_email(db, current_user, email_data)
+    return email
+
+
+@router.post("/send-with-attachments", response_model=EmailResponse, status_code=status.HTTP_201_CREATED)
+async def send_email_with_attachments(
+    to_addr: str = Form(...),
+    subject: str = Form(...),
+    body: Optional[str] = Form(None),
+    attachments: List[UploadFile] = File(default=[]),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """发送邮件（支持附件）"""
+    # 读取附件内容
+    attachment_data = []
+    for file in attachments:
+        if file.filename:  # 跳过空文件
+            content = await file.read()
+            attachment_data.append({
+                'filename': file.filename,
+                'content': content,
+                'content_type': file.content_type or 'application/octet-stream'
+            })
+    
+    email = await email_sender_service.send_email(
+        db, current_user, 
+        to_addr=to_addr,
+        subject=subject, 
+        body=body or "",
+        attachments=attachment_data
+    )
     return email
 
 

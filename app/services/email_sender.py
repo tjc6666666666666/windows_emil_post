@@ -4,6 +4,10 @@
 import aiodns
 import aiosmtplib
 from email.message import EmailMessage
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
 from email.utils import formatdate, make_msgid
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +18,7 @@ from app.models.config import SystemConfig
 from app.schemas.email import EmailSendRequest
 from app.config import settings
 from app.services.dkim_signer import get_dkim_signer
+from typing import List, Optional, Dict, Any
 
 
 class EmailSenderService:
@@ -56,7 +61,8 @@ class EmailSenderService:
         subject: str,
         body: str,
         mail_domain: str,
-        smtp_hostname: str
+        smtp_hostname: str,
+        attachments: Optional[List[Dict[str, Any]]] = None
     ) -> bool:
         """直接发送邮件（通过MX记录）"""
         try:
@@ -66,13 +72,38 @@ class EmailSenderService:
             print(f"解析到MX服务器: {mx_server}")
 
             # 构造邮件
-            message = EmailMessage()
-            message["From"] = from_addr
-            message["To"] = to_addr
-            message["Subject"] = subject
-            message["Date"] = formatdate(localtime=True)
-            message["Message-ID"] = make_msgid(domain=mail_domain)
-            message.set_content(body)
+            if attachments:
+                # 有附件，使用MIMEMultipart
+                message = MIMEMultipart()
+                message["From"] = from_addr
+                message["To"] = to_addr
+                message["Subject"] = subject
+                message["Date"] = formatdate(localtime=True)
+                message["Message-ID"] = make_msgid(domain=mail_domain)
+                
+                # 添加正文
+                message.attach(MIMEText(body, 'plain', 'utf-8'))
+                
+                # 添加附件
+                for attachment in attachments:
+                    part = MIMEBase(*attachment['content_type'].split('/', 1))
+                    part.set_payload(attachment['content'])
+                    encoders.encode_base64(part)
+                    part.add_header(
+                        'Content-Disposition',
+                        'attachment',
+                        filename=attachment['filename']
+                    )
+                    message.attach(part)
+            else:
+                # 无附件，使用简单的EmailMessage
+                message = EmailMessage()
+                message["From"] = from_addr
+                message["To"] = to_addr
+                message["Subject"] = subject
+                message["Date"] = formatdate(localtime=True)
+                message["Message-ID"] = make_msgid(domain=mail_domain)
+                message.set_content(body)
 
             # 添加DKIM签名
             try:
@@ -114,17 +145,43 @@ class EmailSenderService:
         subject: str,
         body: str,
         mail_domain: str,
-        smtp_hostname: str
+        smtp_hostname: str,
+        attachments: Optional[List[Dict[str, Any]]] = None
     ) -> bool:
         """通过SMTP服务器发送邮件"""
         try:
-            message = EmailMessage()
-            message["From"] = from_addr
-            message["To"] = to_addr
-            message["Subject"] = subject
-            message["Date"] = formatdate(localtime=True)
-            message["Message-ID"] = make_msgid(domain=mail_domain)
-            message.set_content(body)
+            if attachments:
+                # 有附件，使用MIMEMultipart
+                message = MIMEMultipart()
+                message["From"] = from_addr
+                message["To"] = to_addr
+                message["Subject"] = subject
+                message["Date"] = formatdate(localtime=True)
+                message["Message-ID"] = make_msgid(domain=mail_domain)
+                
+                # 添加正文
+                message.attach(MIMEText(body, 'plain', 'utf-8'))
+                
+                # 添加附件
+                for attachment in attachments:
+                    part = MIMEBase(*attachment['content_type'].split('/', 1))
+                    part.set_payload(attachment['content'])
+                    encoders.encode_base64(part)
+                    part.add_header(
+                        'Content-Disposition',
+                        'attachment',
+                        filename=attachment['filename']
+                    )
+                    message.attach(part)
+            else:
+                # 无附件，使用简单的EmailMessage
+                message = EmailMessage()
+                message["From"] = from_addr
+                message["To"] = to_addr
+                message["Subject"] = subject
+                message["Date"] = formatdate(localtime=True)
+                message["Message-ID"] = make_msgid(domain=mail_domain)
+                message.set_content(body)
 
             await aiosmtplib.send(
                 message,
@@ -145,9 +202,30 @@ class EmailSenderService:
         self,
         db: AsyncSession,
         user: User,
-        email_data: EmailSendRequest
+        email_data: Optional[EmailSendRequest] = None,
+        to_addr: Optional[str] = None,
+        subject: Optional[str] = None,
+        body: Optional[str] = None,
+        attachments: Optional[List[Dict[str, Any]]] = None
     ) -> Email:
-        """发送邮件"""
+        """发送邮件
+        
+        支持两种调用方式：
+        1. 通过 EmailSendRequest 对象：send_email(db, user, email_data)
+        2. 通过参数：send_email(db, user, to_addr=..., subject=..., body=..., attachments=...)
+        """
+        # 兼容两种调用方式
+        if email_data:
+            final_to_addr = email_data.to_addr
+            final_subject = email_data.subject
+            final_body = email_data.body or ""
+            final_attachments = None
+        else:
+            final_to_addr = to_addr
+            final_subject = subject
+            final_body = body or ""
+            final_attachments = attachments
+        
         # 获取配置
         mail_domain = await self.get_mail_domain(db)
         smtp_hostname = await self.get_smtp_hostname(db)
@@ -156,9 +234,9 @@ class EmailSenderService:
         email = Email(
             sender_id=user.id,
             from_addr=user.get_email(mail_domain),
-            to_addr=email_data.to_addr,
-            subject=email_data.subject,
-            body=email_data.body or "",
+            to_addr=final_to_addr,
+            subject=final_subject,
+            body=final_body,
             status=EmailStatus.DRAFT
         )
         db.add(email)
@@ -169,11 +247,12 @@ class EmailSenderService:
         try:
             success = await self.send_email_direct(
                 from_addr=user.get_email(mail_domain),
-                to_addr=email_data.to_addr,
-                subject=email_data.subject,
-                body=email_data.body or "",
+                to_addr=final_to_addr,
+                subject=final_subject,
+                body=final_body,
                 mail_domain=mail_domain,
-                smtp_hostname=smtp_hostname
+                smtp_hostname=smtp_hostname,
+                attachments=final_attachments
             )
         except Exception as e:
             print(f"邮件发送异常: {e}")

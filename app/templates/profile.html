@@ -27,6 +27,25 @@
     </div>
 
     <div class="profile-card">
+        <h3>API Token</h3>
+        <p class="token-hint">用于 API 调用认证，请妥善保管，不要泄露给他人。</p>
+        <div class="token-container">
+            <input type="text" id="apiToken" readonly class="token-input" value="加载中...">
+            <button type="button" class="btn-copy" onclick="copyToken()">复制</button>
+        </div>
+        <div class="token-example">
+            <h4>API 调用示例（无附件）：</h4>
+            <pre id="apiExample">加载中...</pre>
+            <button type="button" class="btn-copy-small" onclick="copyExample()">复制</button>
+        </div>
+        <div class="token-example">
+            <h4>API 调用示例（带附件）：</h4>
+            <pre id="apiExampleWithAttachment">加载中...</pre>
+            <button type="button" class="btn-copy-small" onclick="copyExampleWithAttachment()">复制</button>
+        </div>
+    </div>
+
+    <div class="profile-card">
         <h3>修改密码</h3>
         <form id="passwordForm">
             <div class="form-group">
@@ -134,6 +153,86 @@
 .btn-primary:hover {
     background: #2980b9;
 }
+
+.token-hint {
+    color: #7f8c8d;
+    font-size: 13px;
+    margin-bottom: 15px;
+}
+
+.token-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.token-input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: monospace;
+    background: #f8f9fa;
+    color: #2c3e50;
+}
+
+.btn-copy {
+    padding: 12px 20px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+    white-space: nowrap;
+}
+
+.btn-copy:hover {
+    background: #219a52;
+}
+
+.token-example {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 15px;
+    position: relative;
+}
+
+.token-example h4 {
+    margin: 0 0 10px 0;
+    color: #34495e;
+    font-size: 14px;
+}
+
+.token-example pre {
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+    font-family: monospace;
+    color: #2c3e50;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.btn-copy-small {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.3s;
+}
+
+.btn-copy-small:hover {
+    background: #2980b9;
+}
 </style>
 {% endblock %}
 
@@ -162,12 +261,61 @@ async function loadUserInfo() {
             document.getElementById('email').textContent = user.email;
             document.getElementById('role').textContent = user.is_admin ? '管理员' : '普通用户';
             document.getElementById('createdAt').textContent = new Date(user.created_at).toLocaleString();
+            
+            // 显示 API Token
+            document.getElementById('apiToken').value = token;
+            
+            // 生成 API 示例
+            const apiExample = `curl -X POST http://${window.location.host}/api/email/send \\
+  -H "Authorization: Bearer ${token}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "to_addr": "recipient@example.com",
+    "subject": "测试邮件",
+    "body": "邮件正文内容"
+  }'`;
+            document.getElementById('apiExample').textContent = apiExample;
+            
+            // 生成带附件的 API 示例
+            const apiExampleWithAttachment = `curl -X POST http://${window.location.host}/api/email/send-with-attachments \\
+  -H "Authorization: Bearer ${token}" \\
+  -F "to_addr=recipient@example.com" \\
+  -F "subject=测试邮件带附件" \\
+  -F "body=邮件正文内容" \\
+  -F "attachments=@/path/to/file.pdf" \\
+  -F "attachments=@/path/to/image.jpg"`;
+            document.getElementById('apiExampleWithAttachment').textContent = apiExampleWithAttachment;
         } else {
             showMessage('获取用户信息失败', 'error');
         }
     } catch (error) {
         showMessage('加载失败', 'error');
     }
+}
+
+function copyToken() {
+    const tokenInput = document.getElementById('apiToken');
+    tokenInput.select();
+    document.execCommand('copy');
+    showMessage('Token 已复制到剪贴板', 'success');
+}
+
+function copyExample() {
+    const example = document.getElementById('apiExample').textContent;
+    navigator.clipboard.writeText(example).then(() => {
+        showMessage('示例已复制到剪贴板', 'success');
+    }).catch(() => {
+        showMessage('复制失败，请手动复制', 'error');
+    });
+}
+
+function copyExampleWithAttachment() {
+    const example = document.getElementById('apiExampleWithAttachment').textContent;
+    navigator.clipboard.writeText(example).then(() => {
+        showMessage('示例已复制到剪贴板', 'success');
+    }).catch(() => {
+        showMessage('复制失败，请手动复制', 'error');
+    });
 }
 
 document.getElementById('passwordForm').addEventListener('submit', async function(e) {
